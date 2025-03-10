@@ -25,6 +25,7 @@ namespace PhysicsSimLab
         private readonly double dt = 0.016; // ~60 FPS
         
         // Configurações
+        private double massa = 1.0;     // Massa da bola (kg)
         private double coefRestituicao = 0.7;
         private double atritoHorizontal = 0.95;
         private double airResistance = 0.01;
@@ -60,6 +61,9 @@ namespace PhysicsSimLab
             // Inicialização após carregamento
             Loaded += MainWindow_Loaded;
             SizeChanged += MainWindow_SizeChanged;
+            
+            // Começar em tela cheia
+            WindowState = WindowState.Maximized;
         }
 
         // Update method signature to match EventHandler delegate
@@ -126,17 +130,17 @@ namespace PhysicsSimLab
                 return;
             }
 
-            // Posiciona o solo no fundo do canvas
+            // Use the full available space for the simulation, with extra width for movement
+            SimulationCanvas.Width = Math.Max(ActualWidth * 3, 3000);
+            SimulationCanvas.Height = Math.Max(ActualHeight * 2, 1000);
+            
+            // Position ground at the bottom
             groundY = SimulationCanvas.Height - 50;
             Canvas.SetTop(GroundLine, groundY);
-
-            // Configura o canvas para preencher o ScrollViewer com espaço adicional para movimento
-            SimulationCanvas.Width = Math.Max(SimulationScroller.ActualWidth * 3, 3000);
-            SimulationCanvas.Height = Math.Max(SimulationScroller.ActualHeight * 3, 1500);
+            GroundLine.Width = SimulationCanvas.Width;
             
-            // Log para debug
-            Console.WriteLine($"Canvas: Width={SimulationCanvas.Width}, Height={SimulationCanvas.Height}");
-            Console.WriteLine($"Ground Y: {groundY}");
+            // Ajusta o scroll para mostrar a área positiva do canvas
+            SimulationScroller.ScrollToHorizontalOffset(0);
         }
         
         private void UpdateScaleAndLimits()
@@ -150,6 +154,7 @@ namespace PhysicsSimLab
             // Atualizar a posição do solo
             groundY = SimulationCanvas.Height - 50;
             Canvas.SetTop(GroundLine, groundY);
+            GroundLine.Width = SimulationCanvas.Width;
             
             // Se a bola já foi criada, atualizar sua posição
             if (ball != null)
@@ -194,6 +199,9 @@ namespace PhysicsSimLab
             ResetSimulation();
             
             // Recuperar valores adicionais dos parâmetros com cultura invariante
+            if (!TryParseInvariant(MassTextBox.Text, out massa) || massa <= 0)
+                massa = 1.0;
+                
             if (!TryParseInvariant(GravityTextBox.Text, out g) || g <= 0)
                 g = 9.81;
                 
@@ -222,6 +230,9 @@ namespace PhysicsSimLab
             y = 10; // metros
             
             // Pega valores da UI para velocidades e outros parâmetros usando cultura invariante
+            if (!TryParseInvariant(MassTextBox.Text, out massa) || massa <= 0)
+                massa = 1.0;
+                
             if (!TryParseInvariant(VxTextBox.Text, out vx)) vx = 6;
             if (!TryParseInvariant(VyTextBox.Text, out vy)) vy = 15;
             if (!TryParseInvariant(RestituicaoTextBox.Text, out coefRestituicao) || 
@@ -274,10 +285,11 @@ namespace PhysicsSimLab
             if (SimulationScroller == null) return;
             
             // Centraliza a câmera na posição inicial da bola
-            double canvasX = SimulationCanvas.ActualWidth / 2;
+            double canvasX = x * scale;
             double canvasY = groundY - y * scale;
             
             try {
+                // Ajusta a visualização para manter a bola no centro
                 cameraOffsetX = Math.Max(0, canvasX - SimulationScroller.ViewportWidth / 2);
                 cameraOffsetY = Math.Max(0, canvasY - SimulationScroller.ViewportHeight / 2);
                 
@@ -325,8 +337,8 @@ namespace PhysicsSimLab
             Point position = e.GetPosition(SimulationCanvas);
             isDragging = true;
             
-            // Converter posição do mouse para coordenadas do mundo de forma mais precisa
-            x = (position.X - SimulationCanvas.ActualWidth / 2) / scale;
+            // Converter posição do mouse para coordenadas do mundo (x começa em 0 na esquerda)
+            x = position.X / scale;
             y = (groundY - position.Y) / scale;
             
             // Limitar a posição Y para não começar abaixo do solo
@@ -342,8 +354,8 @@ namespace PhysicsSimLab
             
             Point position = e.GetPosition(SimulationCanvas);
             
-            // Converter posição do mouse para coordenadas do mundo
-            x = (position.X - SimulationCanvas.ActualWidth / 2) / scale;
+            // Converter posição do mouse para coordenadas do mundo (x começa em 0 na esquerda)
+            x = position.X / scale;
             y = (groundY - position.Y) / scale;
             
             // Limitar a posição Y para não começar abaixo do solo
@@ -375,8 +387,8 @@ namespace PhysicsSimLab
             // Obter a posição do mouse antes do zoom
             Point mousePosition = e.GetPosition(SimulationCanvas);
 
-            // Calcular as coordenadas do mundo antes do zoom
-            double worldX = (mousePosition.X - SimulationCanvas.ActualWidth / 2) / scale;
+            // Calcular as coordenadas do mundo antes do zoom (ajustado para x começar em 0)
+            double worldX = mousePosition.X / scale;
             double worldY = (groundY - mousePosition.Y) / scale;
 
             // Alterar a escala com base na direção do scroll
@@ -404,7 +416,7 @@ namespace PhysicsSimLab
             UpdateTrajectoryVisual();
 
             // Atualizar a posição do scrollviewer para manter o ponto sob o cursor
-            double newMouseX = worldX * scale + SimulationCanvas.ActualWidth / 2;
+            double newMouseX = worldX * scale;
             double newMouseY = groundY - worldY * scale;
 
             // Ajustar o scroll para manter a posição relativa ao mouse
@@ -419,6 +431,13 @@ namespace PhysicsSimLab
             // Atualizar posição e velocidade considerando resistência do ar
             x += vx * dt;
             y += vy * dt - 0.5 * g * dt * dt;
+            
+            // Não permitir que a bola saia pela esquerda do mundo
+            if (x < 0)
+            {
+                x = 0;
+                vx = -vx * coefRestituicao; // Bounce da parede esquerda
+            }
             
             // Adicionar efeito de resistência do ar
             double vTotal = Math.Sqrt(vx * vx + vy * vy);
@@ -507,8 +526,8 @@ namespace PhysicsSimLab
             // Add a null check to prevent NullReferenceException
             if (ball == null) return;
             
-            // Converter coordenadas do mundo para coordenadas do canvas
-            double canvasX = x * scale + SimulationCanvas.ActualWidth / 2;
+            // Converter coordenadas do mundo para coordenadas do canvas (x começa em 0 na esquerda)
+            double canvasX = x * scale;
             double canvasY = groundY - y * scale;
             
             // Atualizar posição da bola (centralizada no ponto)
@@ -550,8 +569,8 @@ namespace PhysicsSimLab
             // Add null check for trajectoryLine
             if (trajectoryLine == null) return;
             
-            // Converter coordenadas do mundo para coordenadas do canvas
-            double canvasX = x * scale + SimulationCanvas.ActualWidth / 2;
+            // Converter coordenadas do mundo para coordenadas do canvas (x começa em 0 na esquerda)
+            double canvasX = x * scale;
             double canvasY = groundY - y * scale;
             
             // Adicionar ponto à trajetória
@@ -574,7 +593,6 @@ namespace PhysicsSimLab
         private void UpdateInfoPanel()
         {
             // Calcular energias
-            double massa = 1.0; // assumimos massa unitária para simplificar
             double velocidadeTotal = Math.Sqrt(vx * vx + vy * vy);
             double energiaCinetica = 0.5 * massa * velocidadeTotal * velocidadeTotal;
             double energiaPotencial = massa * g * y;
@@ -588,6 +606,7 @@ namespace PhysicsSimLab
                                  $"Altura: {y:F1}m\n" +
                                  $"Velocidade X: {vx:F1}m/s\n" +
                                  $"Velocidade Y: {vy:F1}m/s\n" +
+                                 $"Massa: {massa:F1}kg\n" +
                                  $"E. Cinética: {energiaCinetica:F1}J\n" +
                                  $"E. Potencial: {energiaPotencial:F1}J\n" +
                                  $"E. Total: {energiaTotal:F1}J";
