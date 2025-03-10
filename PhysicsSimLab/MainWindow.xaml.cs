@@ -18,24 +18,69 @@ namespace PhysicsSimLab
         // Constantes físicas
         private double g = 9.81;  // Aceleração da gravidade (m/s²)
         
+        // Classe para armazenar dados de cada bola
+        private class BallData
+        {
+            public double X { get; set; }
+            public double Y { get; set; }
+            public double Vx { get; set; }
+            public double Vy { get; set; }
+            public double Mass { get; set; }
+            public double Restitution { get; set; }
+            public double Size { get; set; }
+            public SolidColorBrush Color { get; set; }
+            public Ellipse? Visual { get; set; }
+            public Polyline? Trajectory { get; set; }
+            public List<Point> TrajectoryPoints { get; set; } = new List<Point>();
+            
+            public BallData Clone()
+            {
+                return new BallData
+                {
+                    X = this.X,
+                    Y = this.Y,
+                    Vx = this.Vx,
+                    Vy = this.Vy,
+                    Mass = this.Mass,
+                    Restitution = this.Restitution,
+                    Size = this.Size,
+                    Color = new SolidColorBrush(this.Color.Color)
+                };
+            }
+        }
+        
+        // Lista de bolas e índice da bola ativa
+        private List<BallData> balls = new List<BallData>();
+        private int activeBallIndex = -1;
+        private const int MAX_BALLS = 5;
+        
+        // Lista de cores para bolas diferentes
+        private readonly List<SolidColorBrush> ballColors = new List<SolidColorBrush>
+        {
+            new SolidColorBrush(Colors.Red),
+            new SolidColorBrush(Colors.Blue),
+            new SolidColorBrush(Colors.Green),
+            new SolidColorBrush(Colors.Orange),
+            new SolidColorBrush(Colors.Purple)
+        };
+        
         // Variáveis de simulação
-        private double x, y;       // Posição atual
-        private double vx, vy;     // Velocidade atual
         private double time = 0;   // Tempo de simulação
         private readonly double dt = 0.016; // ~60 FPS
         
-        // Configurações
-        private double massa = 1.0;     // Massa da bola (kg)
-        private double coefRestituicao = 0.7;
+        // Configurações compartilhadas
         private double atritoHorizontal = 0.95;
         private double airResistance = 0.01;
-        private double ballSize = 30;
         
         // Elementos visuais
         private Ellipse? ball;  // Mark as nullable
         private readonly List<Point> trajectory = new List<Point>();
         private Polyline? trajectoryLine;  // Mark as nullable
         private DispatcherTimer timer;
+        private Line? yAxisLine;  // Representação visual do eixo Y
+        private Line? xAxisLine;  // Representação visual do eixo X
+        private readonly List<UIElement> yAxisMarkings = new List<UIElement>(); // Marcações no eixo Y
+        private readonly List<UIElement> xAxisMarkings = new List<UIElement>(); // Marcações no eixo X
         
         // Mapeamento do mundo para canvas
         private double scale = 10; // pixels por metro
@@ -69,31 +114,54 @@ namespace PhysicsSimLab
         // Update method signature to match EventHandler delegate
         private void TimerTick(object? sender, EventArgs e)
         {
-            // Safety check for ball and trajectoryLine
-            if (ball == null || trajectoryLine == null) 
+            if (balls.Count == 0)
             {
                 timer.Stop();
                 return;
             }
             
-            // Atualiza a física
-            UpdatePhysics();
+            bool allStopped = true;
             
-            // Atualiza a posição visual da bola
-            UpdateBallPosition();
+            // Atualizar cada bola
+            foreach (var ball in balls)
+            {
+                if (ball.Visual == null || ball.Trajectory == null) 
+                    continue;
+                
+                // Atualizar a física desta bola
+                UpdatePhysics(ball);
+                
+                // Atualizar a posição visual
+                UpdateBallPosition(ball);
+                
+                // Adicionar ponto à trajetória
+                AddTrajectoryPoint(ball);
+                
+                // Verificar se a bola ainda está em movimento
+                if (Math.Abs(ball.Vy) >= 0.1 || Math.Abs(ball.Vx) >= 0.1 || ball.Y > 0.01)
+                {
+                    allStopped = false;
+                }
+            }
             
-            // Adiciona ponto à trajetória
-            AddTrajectoryPoint();
+            // Atualizar o painel de informações para a bola ativa
+            if (activeBallIndex >= 0 && activeBallIndex < balls.Count)
+            {
+                UpdateInfoPanel(balls[activeBallIndex]);
+                UpdateInfoPanelPosition(balls[activeBallIndex]);
+            }
             
-            // Atualiza o painel de informações
-            UpdateInfoPanel();
-            UpdateInfoPanelPosition();
+            // Implementa a camera para seguir a bola ativa
+            if (activeBallIndex >= 0 && activeBallIndex < balls.Count)
+            {
+                UpdateCamera(balls[activeBallIndex]);
+            }
             
-            // Implementa a camera para seguir a bola
-            UpdateCamera();
+            // Incrementa o tempo
+            time += dt;
             
-            // Verifica se a simulação deve parar
-            if ((Math.Abs(vy) < 0.1 && Math.Abs(vx) < 0.1 && y <= 0.01) || time >= 30)
+            // Verificar se a simulação deve parar
+            if (allStopped || time >= 30)
             {
                 timer.Stop();
                 StartButton.Content = "Reiniciar";
@@ -105,7 +173,17 @@ namespace PhysicsSimLab
         {
             // Configura dimensões iniciais
             SetupSimulationCanvas();
-            InitializeSimulation();  // Make sure this runs completely
+            
+            // Adicionar o sistema de coordenadas completo - delay slightly to ensure canvas is ready
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() => {
+                CreateCoordinateSystem();
+                
+                // Adicionar a primeira bola
+                AddNewBall();
+                
+                // Centralizar a câmera
+                CenterCamera();
+            }));
             
             // Registrar o evento de roda do mouse para zoom
             SimulationCanvas.MouseWheel += SimulationCanvas_MouseWheel;
@@ -113,6 +191,9 @@ namespace PhysicsSimLab
             // Apply the thin scrollbar style
             Style scrollBarStyle = (Style)FindResource("ThinScrollBar");
             SimulationScroller.Resources[typeof(ScrollBar)] = scrollBarStyle;
+            
+            // Centralizar a câmera para ver o eixo Y
+            CenterCamera();
         }
 
         private void MainWindow_SizeChanged(object? sender, SizeChangedEventArgs e)
@@ -134,13 +215,145 @@ namespace PhysicsSimLab
             SimulationCanvas.Width = Math.Max(ActualWidth * 3, 3000);
             SimulationCanvas.Height = Math.Max(ActualHeight * 2, 1000);
             
-            // Position ground at the bottom
-            groundY = SimulationCanvas.Height - 50;
+            // Position ground at the bottom with validation
+            groundY = double.IsNaN(SimulationCanvas.Height) ? 500 : SimulationCanvas.Height - 50;
             Canvas.SetTop(GroundLine, groundY);
             GroundLine.Width = SimulationCanvas.Width;
             
-            // Ajusta o scroll para mostrar a área positiva do canvas
-            SimulationScroller.ScrollToHorizontalOffset(0);
+            // Ajusta o scroll para centralizar o eixo Y
+            if (!double.IsNaN(SimulationCanvas.Width) && !double.IsNaN(SimulationScroller.ViewportWidth))
+            {
+                SimulationScroller.ScrollToHorizontalOffset(0); // Start at left edge to see y-axis
+            }
+        }
+        
+        // Método para criar o sistema de coordenadas completo
+        private void CreateCoordinateSystem()
+        {
+            // Verificar se groundY é válido
+            if (double.IsNaN(groundY) || double.IsInfinity(groundY))
+            {
+                // Definir um valor padrão seguro se groundY for inválido
+                groundY = SimulationCanvas.ActualHeight > 50 ? SimulationCanvas.ActualHeight - 50 : 500;
+            }
+
+            // Limpar sistema de coordenadas existente
+            ClearCoordinateSystem();
+            
+            try
+            {
+                // Criar linha do eixo Y em x=0 com mais visibilidade
+                yAxisLine = new Line
+                {
+                    X1 = 0,
+                    Y1 = 0,
+                    X2 = 0,
+                    Y2 = groundY,
+                    Stroke = Brushes.DarkBlue, // Cor mais visível
+                    StrokeThickness = 3 // Linha mais grossa
+                };
+                
+                SimulationCanvas.Children.Add(yAxisLine);
+                Canvas.SetZIndex(yAxisLine, 90); // Garantir que fique bem visível
+                Canvas.SetLeft(yAxisLine, 0); // Certificar que está em X=0
+                
+                // Debug info
+                Console.WriteLine($"Y-Axis created: X1={yAxisLine.X1}, Y1={yAxisLine.Y1}, X2={yAxisLine.X2}, Y2={yAxisLine.Y2}");
+                
+                // Criar linha do eixo X em y=groundY (solo)
+                xAxisLine = new Line
+                {
+                    X1 = 0,
+                    X2 = SimulationCanvas.Width,
+                    Y1 = groundY,
+                    Y2 = groundY,
+                    Stroke = Brushes.DarkBlue, // Cor mais visível
+                    StrokeThickness = 3 // Linha mais grossa
+                };
+                
+                SimulationCanvas.Children.Add(xAxisLine);
+                Canvas.SetZIndex(xAxisLine, 90);
+                
+
+                // Adicionar marcações no eixo X (a cada 5 metros)
+                for (int i = 5; i <= 100; i += 5)
+                {
+                    double xPos = i * scale;
+                    
+                    // Adicionar uma linha de marca
+                    Line tick = new Line
+                    {
+                        X1 = xPos,
+                        X2 = xPos,
+                        Y1 = groundY - 5,
+                        Y2 = groundY + 5,
+                        Stroke = Brushes.Black,
+                        StrokeThickness = 1
+                    };
+                    
+                    // Adicionar texto da marca
+                    TextBlock tickLabel = new TextBlock
+                    {
+                        Text = i.ToString(),
+                        FontSize = 10
+                    };
+                    
+                    Canvas.SetLeft(tickLabel, xPos - 8);
+                    Canvas.SetTop(tickLabel, groundY + 8);
+                    
+                    SimulationCanvas.Children.Add(tick);
+                    SimulationCanvas.Children.Add(tickLabel);
+                    Canvas.SetZIndex(tick, 50);
+                    Canvas.SetZIndex(tickLabel, 50);
+                    
+                    // Adicionar à lista para controle
+                    xAxisMarkings.Add(tick);
+                    xAxisMarkings.Add(tickLabel);
+                }
+                
+                // Adicionar texto de origem (0)
+                TextBlock originLabel = new TextBlock
+                {
+                    Text = "0",
+                    FontSize = 10
+                };
+                Canvas.SetLeft(originLabel, -15);
+                Canvas.SetTop(originLabel, groundY + 8);
+                SimulationCanvas.Children.Add(originLabel);
+                Canvas.SetZIndex(originLabel, 50);
+                xAxisMarkings.Add(originLabel);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error creating coordinate system: {ex.Message}");
+            }
+        }
+        
+        private void ClearCoordinateSystem()
+        {
+            // Limpar marcações do eixo Y
+            foreach (var mark in yAxisMarkings)
+            {
+                SimulationCanvas.Children.Remove(mark);
+            }
+            yAxisMarkings.Clear();
+            
+            if (yAxisLine != null)
+            {
+                SimulationCanvas.Children.Remove(yAxisLine);
+            }
+            
+            // Limpar marcações do eixo X
+            foreach (var mark in xAxisMarkings)
+            {
+                SimulationCanvas.Children.Remove(mark);
+            }
+            xAxisMarkings.Clear();
+            
+            if (xAxisLine != null)
+            {
+                SimulationCanvas.Children.Remove(xAxisLine);
+            }
         }
         
         private void UpdateScaleAndLimits()
@@ -151,21 +364,41 @@ namespace PhysicsSimLab
                 scale = Math.Min(SimulationScroller.ActualWidth / 80, SimulationScroller.ActualHeight / 40);
             }
             
+            // Validação para evitar NaN
+            if (double.IsNaN(SimulationCanvas.Height))
+                return;
+                
             // Atualizar a posição do solo
             groundY = SimulationCanvas.Height - 50;
             Canvas.SetTop(GroundLine, groundY);
             GroundLine.Width = SimulationCanvas.Width;
             
+            // Atualizar todo o sistema de coordenadas
+            UpdateCoordinateSystem();
+            
             // Se a bola já foi criada, atualizar sua posição
-            if (ball != null)
+            foreach (var ball in balls)
             {
-                UpdateBallPosition();
+                if (ball.Visual != null)
+                {
+                    UpdateBallPosition(ball);
+                }
             }
+        }
+        
+        private void UpdateCoordinateSystem()
+        {
+            // Atualizar com nova escala e posição do solo
+            ClearCoordinateSystem();
+            CreateCoordinateSystem();
         }
         
         private void InitializeSimulation()
         {
-            // Limpa canvas se necessário (exceto elementos de UI fixos)
+            // This method isn't needed anymore as we're managing balls individually
+            // Instead, we just make sure the existing elements are properly configured
+            
+            // Clear any existing trajectories and balls from old implementation
             if (trajectoryLine != null)
                 SimulationCanvas.Children.Remove(trajectoryLine);
                 
@@ -174,34 +407,9 @@ namespace PhysicsSimLab
                 
             trajectory.Clear();
             
-            // Adiciona a linha de trajetória
-            trajectoryLine = new Polyline
-            {
-                Stroke = Brushes.Red,
-                StrokeThickness = 1,
-                Opacity = 0.3
-            };
-            SimulationCanvas.Children.Add(trajectoryLine);
+            // No need to create new balls here since we're using AddNewBall() method
             
-            // Adiciona a bola com borda para torná-la mais visível
-            ball = new Ellipse
-            {
-                Width = 30,
-                Height = 30,
-                Fill = Brushes.Red,
-                Stroke = Brushes.Black,
-                StrokeThickness = 2
-            };
-            SimulationCanvas.Children.Add(ball);
-            Canvas.SetZIndex(ball, 100);
-            
-            // Reseta a simulação
-            ResetSimulation();
-            
-            // Recuperar valores adicionais dos parâmetros com cultura invariante
-            if (!TryParseInvariant(MassTextBox.Text, out massa) || massa <= 0)
-                massa = 1.0;
-                
+            // Apply global settings
             if (!TryParseInvariant(GravityTextBox.Text, out g) || g <= 0)
                 g = 9.81;
                 
@@ -211,35 +419,17 @@ namespace PhysicsSimLab
             if (!TryParseInvariant(FrictionTextBox.Text, out atritoHorizontal) || 
                 atritoHorizontal < 0 || atritoHorizontal > 1)
                 atritoHorizontal = 0.95;
-                
-            if (!TryParseInvariant(BallSizeTextBox.Text, out ballSize) || ballSize <= 0)
-                ballSize = 30;
-                
-            // Ensure ball has the correct size immediately
-            if (ball != null)
-            {
-                ball.Width = ballSize;
-                ball.Height = ballSize;
-            }
         }
         
         private void ResetSimulation()
         {
-            // Posição inicial padrão da bola (será atualizada pelo mouse)
-            x = 0;  // metros
-            y = 10; // metros
+            // Parar o timer
+            timer.Stop();
+            StartButton.Content = "Iniciar";
+            time = 0;
+            simulationStarted = false;
             
-            // Pega valores da UI para velocidades e outros parâmetros usando cultura invariante
-            if (!TryParseInvariant(MassTextBox.Text, out massa) || massa <= 0)
-                massa = 1.0;
-                
-            if (!TryParseInvariant(VxTextBox.Text, out vx)) vx = 6;
-            if (!TryParseInvariant(VyTextBox.Text, out vy)) vy = 15;
-            if (!TryParseInvariant(RestituicaoTextBox.Text, out coefRestituicao) || 
-                coefRestituicao < 0 || coefRestituicao > 1)
-                coefRestituicao = 0.7;
-            
-            // Recuperar valores adicionais dos parâmetros com cultura invariante
+            // Recuperar os parâmetros globais
             if (!TryParseInvariant(GravityTextBox.Text, out g) || g <= 0)
                 g = 9.81;
                 
@@ -249,52 +439,92 @@ namespace PhysicsSimLab
             if (!TryParseInvariant(FrictionTextBox.Text, out atritoHorizontal) || 
                 atritoHorizontal < 0 || atritoHorizontal > 1)
                 atritoHorizontal = 0.95;
-                
-            if (!TryParseInvariant(BallSizeTextBox.Text, out ballSize) || ballSize <= 0)
-                ballSize = 30;
-                
-            // Atualizar tamanho da bola
-            if (ball != null)
+            
+            // Para cada bola, resetar as trajetórias
+            foreach (var ball in balls)
             {
-                ball.Width = ballSize;
-                ball.Height = ballSize;
+                // Limpar trajetória visual, mas manter os pontos para persistência
+                if (ball.Trajectory != null)
+                {
+                    ball.Trajectory.Points.Clear();
+                }
             }
             
-            // Reseta tempo e estado
-            time = 0;
-            simulationStarted = false;
+            // Aplicar os parâmetros da UI para a bola ativa, se houver alguma
+            ApplyUIParametersToBall();
             
-            // Limpa trajetória
-            trajectory.Clear();
-            if (trajectoryLine != null) // Fix for line 257 - add null check
-            {
-                trajectoryLine.Points.Clear();
-            }
-            
-            // Atualiza a posição visual da bola e infos
-            UpdateBallPosition();
-            UpdateInfoPanel();
-            UpdateInfoPanelPosition();
-            
-            // Centralizar a visualização no canvas
+            // Centralizar a câmera
             CenterCamera();
+        }
+        
+void ApplyUIParametersToBall()
+        {
+            if (activeBallIndex < 0 || activeBallIndex >= balls.Count)
+                return;
+
+            BallData ball = balls[activeBallIndex];
+
+            // Ler os valores dos controles
+            double mass;
+            if (!TryParseInvariant(MassTextBox.Text, out mass) || mass <= 0)
+                mass = 1.0;
+            ball.Mass = mass;
+
+            double vx;
+            if (!TryParseInvariant(VxTextBox.Text, out vx))
+                vx = 6;
+            ball.Vx = vx;
+
+            double vy;
+            if (!TryParseInvariant(VyTextBox.Text, out vy))
+                vy = 15;
+            ball.Vy = vy;
+
+            double restitution;
+            if (!TryParseInvariant(RestituicaoTextBox.Text, out restitution) ||
+                restitution < 0 || restitution > 1)
+                restitution = 0.7;
+            ball.Restitution = restitution;
+
+            double size;
+            if (!TryParseInvariant(BallSizeTextBox.Text, out size) || size <= 0)
+                size = 30;
+            ball.Size = size;
+
+            // Atualizar o visual da bola
+            if (ball.Visual != null)
+            {
+                ball.Visual.Width = ball.Size;
+                ball.Visual.Height = ball.Size;
+            }
+
+            // Atualizar posição visual
+            UpdateBallPosition(ball);
+            UpdateInfoPanel(ball);
+            UpdateInfoPanelPosition(ball);
         }
         
         private void CenterCamera()
         {
             if (SimulationScroller == null) return;
             
-            // Centraliza a câmera na posição inicial da bola
-            double canvasX = x * scale;
-            double canvasY = groundY - y * scale;
-            
             try {
-                // Ajusta a visualização para manter a bola no centro
-                cameraOffsetX = Math.Max(0, canvasX - SimulationScroller.ViewportWidth / 2);
-                cameraOffsetY = Math.Max(0, canvasY - SimulationScroller.ViewportHeight / 2);
+                // Garantir que o y-axis está sempre visível
+                SimulationScroller.ScrollToHorizontalOffset(0);
                 
-                SimulationScroller.ScrollToHorizontalOffset(cameraOffsetX);
-                SimulationScroller.ScrollToVerticalOffset(cameraOffsetY);
+                // Centralizar verticalmente na bola ou no centro do canvas
+                if (ball != null)
+                {
+                    double ballY = Canvas.GetTop(ball) + ball.Height / 2;
+                    cameraOffsetY = Math.Max(0, ballY - SimulationScroller.ViewportHeight / 2);
+                    SimulationScroller.ScrollToVerticalOffset(cameraOffsetY);
+                }
+                else
+                {
+                    // Mostrar o meio do eixo Y
+                    double middleY = groundY / 2;
+                    SimulationScroller.ScrollToVerticalOffset(Math.Max(0, middleY - SimulationScroller.ViewportHeight / 2));
+                }
             }
             catch (Exception ex) {
                 Console.WriteLine($"Error in CenterCamera: {ex.Message}");
@@ -332,38 +562,43 @@ namespace PhysicsSimLab
         
         private void SimulationCanvas_MouseLeftButtonDown(object? sender, MouseButtonEventArgs e)
         {
-            if (simulationStarted || ball == null) return; // Add ball null check
+            if (simulationStarted || activeBallIndex < 0 || activeBallIndex >= balls.Count) return;
             
             Point position = e.GetPosition(SimulationCanvas);
             isDragging = true;
             
-            // Converter posição do mouse para coordenadas do mundo (x começa em 0 na esquerda)
-            x = position.X / scale;
-            y = (groundY - position.Y) / scale;
+            // Get the active ball and set its position
+            BallData activeBall = balls[activeBallIndex];
+            
+            // Converter posição do mouse para coordenadas do mundo
+            activeBall.X = position.X / scale;
+            activeBall.Y = (groundY - position.Y) / scale;
             
             // Limitar a posição Y para não começar abaixo do solo
-            if (y < 0) y = 0;
+            if (activeBall.Y < 0) activeBall.Y = 0;
             
-            UpdateBallPosition();
-            UpdateInfoPanel();
+            UpdateBallPosition(activeBall);
+            UpdateInfoPanel(activeBall);
+            UpdateInfoPanelPosition(activeBall);
         }
         
         private void SimulationCanvas_MouseMove(object? sender, MouseEventArgs e)
         {
-            if (!isDragging || simulationStarted || ball == null) return; // Add ball null check
+            if (!isDragging || simulationStarted || activeBallIndex < 0 || activeBallIndex >= balls.Count) return;
             
             Point position = e.GetPosition(SimulationCanvas);
+            BallData activeBall = balls[activeBallIndex];
             
-            // Converter posição do mouse para coordenadas do mundo (x começa em 0 na esquerda)
-            x = position.X / scale;
-            y = (groundY - position.Y) / scale;
+            // Converter posição do mouse para coordenadas do mundo
+            activeBall.X = position.X / scale;
+            activeBall.Y = (groundY - position.Y) / scale;
             
             // Limitar a posição Y para não começar abaixo do solo
-            if (y < 0) y = 0;
+            if (activeBall.Y < 0) activeBall.Y = 0;
             
-            UpdateBallPosition();
-            UpdateInfoPanel();
-            UpdateInfoPanelPosition();
+            UpdateBallPosition(activeBall);
+            UpdateInfoPanel(activeBall);
+            UpdateInfoPanelPosition(activeBall);
         }
         
         private void SimulationCanvas_MouseLeftButtonUp(object? sender, MouseButtonEventArgs e)
@@ -380,7 +615,8 @@ namespace PhysicsSimLab
                 return;
             }
 
-            if (ball == null) return;
+            // Check if we have any balls
+            if (balls.Count == 0 || activeBallIndex < 0) return;
 
             e.Handled = true; // Previne o comportamento padrão de scroll
 
@@ -406,14 +642,23 @@ namespace PhysicsSimLab
             // Limitar a escala para evitar valores extremos
             scale = Math.Max(1, Math.Min(scale, 50));
 
-            // Atualizar a visualização
-            UpdateBallPosition();
+            // Atualizar a visualização de todas as bolas
+            foreach (var ball in balls)
+            {
+                UpdateBallPosition(ball);
+            }
 
             // Recalcular a posição do solo para manter consistência com o zoom
             UpdateGroundPosition();
 
-            // Atualizar os elementos visuais da trajetória
-            UpdateTrajectoryVisual();
+            // Atualizar as trajetórias de todas as bolas
+            foreach (var ball in balls)
+            {
+                UpdateTrajectoryVisual(ball);
+            }
+
+            // Atualizar o sistema de coordenadas para a nova escala
+            UpdateCoordinateSystem();
 
             // Atualizar a posição do scrollviewer para manter o ponto sob o cursor
             double newMouseX = worldX * scale;
@@ -424,50 +669,71 @@ namespace PhysicsSimLab
             SimulationScroller.ScrollToVerticalOffset(SimulationScroller.VerticalOffset + (newMouseY - mousePosition.Y));
         }
 
+        // Add missing method to update trajectory visual for a specific ball
+        private void UpdateTrajectoryVisual(BallData ball)
+        {
+            if (ball.Trajectory == null || ball.TrajectoryPoints == null || ball.TrajectoryPoints.Count == 0) 
+                return;
+            
+            try {
+                PointCollection newPoints = new PointCollection();
+                foreach (Point point in ball.TrajectoryPoints)
+                {
+                    newPoints.Add(point);
+                }
+                
+                ball.Trajectory.Points = newPoints;
+            }
+            catch (Exception ex) {
+                // Log error to debug console
+                Console.WriteLine($"Error in UpdateTrajectoryVisual for a ball: {ex.Message}");
+            }
+        }
+
         #endregion
         
-        private void UpdatePhysics()
+        private void UpdatePhysics(BallData ball)
         {
             // Atualizar posição e velocidade considerando resistência do ar
-            x += vx * dt;
-            y += vy * dt - 0.5 * g * dt * dt;
+            ball.X += ball.Vx * dt;
+            ball.Y += ball.Vy * dt - 0.5 * g * dt * dt;
             
-            // Não permitir que a bola saia pela esquerda do mundo
-            if (x < 0)
+            // Não permitir que a bola saia pela esquerda do mundo (eixo Y agora é uma barreira)
+            if (ball.X < 0)
             {
-                x = 0;
-                vx = -vx * coefRestituicao; // Bounce da parede esquerda
+                ball.X = 0;
+                ball.Vx = -ball.Vx * ball.Restitution; // Quicar na barreira do eixo Y
             }
             
             // Adicionar efeito de resistência do ar
-            double vTotal = Math.Sqrt(vx * vx + vy * vy);
+            double vTotal = Math.Sqrt(ball.Vx * ball.Vx + ball.Vy * ball.Vy);
             if (vTotal > 0)
             {
                 double dragForceMagnitude = airResistance * vTotal * vTotal;
-                double dragForceX = -dragForceMagnitude * vx / vTotal;
-                double dragForceY = -dragForceMagnitude * vy / vTotal;
+                double dragForceX = -dragForceMagnitude * ball.Vx / vTotal;
+                double dragForceY = -dragForceMagnitude * ball.Vy / vTotal;
                 
-                vx += dragForceX * dt;
-                vy += dragForceY * dt;
+                ball.Vx += dragForceX * dt;
+                ball.Vy += dragForceY * dt;
             }
             
             // Efeito da gravidade
-            vy -= g * dt;
+            ball.Vy -= g * dt;
             
             // Verificar colisão com o solo (tratamento melhorado para evitar bugs)
-            if (y <= 0.01 && vy < 0 && ball != null)
+            if (ball.Y <= 0.01 && ball.Vy < 0 && ball.Visual != null)
             {
                 // Garantir que a bola não fique abaixo do solo
-                y = 0.01;
+                ball.Y = 0.01;
                 
                 // Armazenar a velocidade de impacto para efeitos visuais
-                double impactVelocity = Math.Abs(vy);
+                double impactVelocity = Math.Abs(ball.Vy);
                 
                 // Inverter velocidade vertical com perda de energia
-                vy = -vy * coefRestituicao;
+                ball.Vy = -ball.Vy * ball.Restitution;
                 
                 // Reduzir velocidade horizontal devido ao atrito somente em caso de contato com o solo
-                vx *= atritoHorizontal;
+                ball.Vx *= atritoHorizontal;
                 
                 // Apenas aplicar o efeito de achatamento se o impacto for significativo
                 if (impactVelocity > 2.0)
@@ -480,7 +746,7 @@ namespace PhysicsSimLab
                         
                         // Efeito de achatamento (mudar escala visual brevemente)
                         ScaleTransform scaleTransform = new ScaleTransform(stretchFactor, squashFactor);
-                        ball.RenderTransform = scaleTransform;
+                        ball.Visual.RenderTransform = scaleTransform;
                         
                         // Retorna à forma normal após um breve período
                         DispatcherTimer resetScale = new DispatcherTimer
@@ -490,10 +756,10 @@ namespace PhysicsSimLab
                         
                         resetScale.Tick += (s, e) =>
                         {
-                            if (ball != null)
+                            if (ball.Visual != null)
                             {
                                 // Transição suave de volta à forma normal
-                                ball.RenderTransform = null;
+                                ball.Visual.RenderTransform = null;
                             }
                             resetScale.Stop();
                         };
@@ -504,58 +770,59 @@ namespace PhysicsSimLab
                     {
                         Console.WriteLine($"Error in collision handling: {ex.Message}");
                         // Ensure ball returns to normal state in case of error
-                        if (ball != null)
-                            ball.RenderTransform = null;
+                        if (ball.Visual != null)
+                            ball.Visual.RenderTransform = null;
                     }
                 }
                 
                 // Se a velocidade for muito baixa, pare completamente para evitar vibrações
-                if (Math.Abs(vy) < 0.2)
-                    vy = 0;
+                if (Math.Abs(ball.Vy) < 0.2)
+                    ball.Vy = 0;
                     
-                if (Math.Abs(vx) < 0.2)
-                    vx = 0;
+                if (Math.Abs(ball.Vx) < 0.2)
+                    ball.Vx = 0;
             }
-            
-            // Incrementa o tempo
-            time += dt;
         }
         
-        private void UpdateBallPosition()
+        private void UpdateBallPosition(BallData ball)
         {
-            // Add a null check to prevent NullReferenceException
-            if (ball == null) return;
+            if (ball.Visual == null) return;
             
-            // Converter coordenadas do mundo para coordenadas do canvas (x começa em 0 na esquerda)
-            double canvasX = x * scale;
-            double canvasY = groundY - y * scale;
+            // Converter coordenadas do mundo para coordenadas do canvas
+            double canvasX = ball.X * scale;
+            double canvasY = groundY - ball.Y * scale;
             
             // Atualizar posição da bola (centralizada no ponto)
-            Canvas.SetLeft(ball, canvasX - ball.Width / 2);
-            Canvas.SetTop(ball, canvasY - ball.Height / 2);
+            Canvas.SetLeft(ball.Visual, canvasX - ball.Visual.Width / 2);
+            Canvas.SetTop(ball.Visual, canvasY - ball.Visual.Height / 2);
         }
 
-        private void UpdateCamera()
+        private void UpdateCamera(BallData ball)
         {
-            if (SimulationScroller == null || ball == null) return;
+            if (SimulationScroller == null || ball.Visual == null) return;
 
-            // Obtém a posição atual da bola no canvas
-            double ballLeft = Canvas.GetLeft(ball) + ball.Width / 2;
-            double ballTop = Canvas.GetTop(ball) + ball.Height / 2;
+            // Obter posição atual da bola
+            double ballLeft = Canvas.GetLeft(ball.Visual) + ball.Visual.Width / 2;
+            double ballTop = Canvas.GetTop(ball.Visual) + ball.Visual.Height / 2;
 
-            // Calcula os offsets para manter a bola no centro da viewport
-            double targetOffsetX = ballLeft - SimulationScroller.ViewportWidth / 2;
-            double targetOffsetY = ballTop - SimulationScroller.ViewportHeight / 2;
+            // Calcular a posição ideal para manter o eixo Y no centro e a bola visível
+            double idealOffsetX = -SimulationScroller.ViewportWidth / 2;
+            double targetOffsetX = Math.Max(0, idealOffsetX);
+            
+            if (ballLeft > targetOffsetX + SimulationScroller.ViewportWidth * 0.9)
+            {
+                targetOffsetX = ballLeft - SimulationScroller.ViewportWidth * 0.9;
+            }
 
-            // Suaviza o movimento da camera (interpolação)
+            // Suavizar movimento da câmera
             cameraOffsetX = cameraOffsetX + (targetOffsetX - cameraOffsetX) * 0.1;
-            cameraOffsetY = cameraOffsetY + (targetOffsetY - cameraOffsetY) * 0.1;
+            cameraOffsetY = cameraOffsetY + (ballTop - SimulationScroller.ViewportHeight / 2 - cameraOffsetY) * 0.1;
 
-            // Mantém a camera dentro dos limites do canvas
+            // Garantir que a câmera fique dentro dos limites
             cameraOffsetX = Math.Max(0, Math.Min(cameraOffsetX, SimulationCanvas.Width - SimulationScroller.ViewportWidth));
             cameraOffsetY = Math.Max(0, Math.Min(cameraOffsetY, SimulationCanvas.Height - SimulationScroller.ViewportHeight));
 
-            // Verifica se os offsets são válidos antes de atualizar a posição da scroll
+            // Atualizar posição do scroll
             if (!double.IsNaN(cameraOffsetX) && !double.IsNaN(cameraOffsetY))
             {
                 SimulationScroller.ScrollToHorizontalOffset(cameraOffsetX);
@@ -563,64 +830,57 @@ namespace PhysicsSimLab
             }
         }
 
-
-        private void AddTrajectoryPoint()
+        private void AddTrajectoryPoint(BallData ball)
         {
-            // Add null check for trajectoryLine
-            if (trajectoryLine == null) return;
+            if (ball.Trajectory == null) return;
             
-            // Converter coordenadas do mundo para coordenadas do canvas (x começa em 0 na esquerda)
-            double canvasX = x * scale;
-            double canvasY = groundY - y * scale;
+            // Converter coordenadas do mundo para coordenadas do canvas
+            double canvasX = ball.X * scale;
+            double canvasY = groundY - ball.Y * scale;
             
             // Adicionar ponto à trajetória
-            trajectory.Add(new Point(canvasX, canvasY));
-            
-            // Limitar número de pontos para performance
-            if (trajectory.Count > 500)
-                trajectory.RemoveAt(0);
+            ball.TrajectoryPoints.Add(new Point(canvasX, canvasY));
             
             try {
-                // Atualizar a linha de trajetória - wrap in try/catch to prevent crashes
-                trajectoryLine.Points = new PointCollection(trajectory);
+                // Atualizar a linha de trajetória com todos os pontos (para persistência)
+                ball.Trajectory.Points = new PointCollection(ball.TrajectoryPoints);
             }
             catch (Exception ex) {
-                // Log error to debug console
                 Console.WriteLine($"Error updating trajectory points: {ex.Message}");
             }
         }
         
-        private void UpdateInfoPanel()
+        private void UpdateInfoPanel(BallData ball)
         {
             // Calcular energias
-            double velocidadeTotal = Math.Sqrt(vx * vx + vy * vy);
-            double energiaCinetica = 0.5 * massa * velocidadeTotal * velocidadeTotal;
-            double energiaPotencial = massa * g * y;
+            double velocidadeTotal = Math.Sqrt(ball.Vx * ball.Vx + ball.Vy * ball.Vy);
+            double energiaCinetica = 0.5 * ball.Mass * velocidadeTotal * velocidadeTotal;
+            double energiaPotencial = ball.Mass * g * ball.Y;
             double energiaTotal = energiaCinetica + energiaPotencial;
             
-            // Atualizar texto de informação com fonte maior
-            InfoTextBlock.FontSize = 14; // Aumentar tamanho da fonte
-            InfoTextBlock.FontWeight = FontWeights.SemiBold; // Opcionalmente tornar fonte mais nítida
+            // Atualizar texto de informação
+            InfoTextBlock.FontSize = 14;
+            InfoTextBlock.FontWeight = FontWeights.SemiBold;
             InfoTextBlock.Text = $"Tempo: {time:F2}s\n" +
-                                 $"Posição X: {x:F1}m\n" +
-                                 $"Altura: {y:F1}m\n" +
-                                 $"Velocidade X: {vx:F1}m/s\n" +
-                                 $"Velocidade Y: {vy:F1}m/s\n" +
-                                 $"Massa: {massa:F1}kg\n" +
+                                 $"Posição X: {ball.X:F1}m\n" +
+                                 $"Altura: {ball.Y:F1}m\n" +
+                                 $"Velocidade X: {ball.Vx:F1}m/s\n" +
+                                 $"Velocidade Y: {ball.Vy:F1}m/s\n" +
+                                 $"Massa: {ball.Mass:F1}kg\n" +
                                  $"E. Cinética: {energiaCinetica:F1}J\n" +
                                  $"E. Potencial: {energiaPotencial:F1}J\n" +
                                  $"E. Total: {energiaTotal:F1}J";
         }
         
-        private void UpdateInfoPanelPosition()
+        private void UpdateInfoPanelPosition(BallData ball)
         {
-            if (ball == null || InfoPanel == null) return;
+            if (ball.Visual == null || InfoPanel == null) return;
             
-            // Posiciona o painel de informações próximo à bola, mas acima para não cobrir
-            double ballLeft = Canvas.GetLeft(ball);
-            double ballTop = Canvas.GetTop(ball);
+            // Posicionar painel de informações próximo à bola
+            double ballLeft = Canvas.GetLeft(ball.Visual);
+            double ballTop = Canvas.GetTop(ball.Visual);
             
-            Canvas.SetLeft(InfoPanel, ballLeft + ball.Width + 10);
+            Canvas.SetLeft(InfoPanel, ballLeft + ball.Visual.Width + 10);
             Canvas.SetTop(InfoPanel, ballTop - InfoPanel.ActualHeight - 5);
         }
         
@@ -660,10 +920,12 @@ namespace PhysicsSimLab
         private void SimulationScroller_ScrollChanged(object sender, ScrollChangedEventArgs e)
         {
             // Update ball and info panel positions if needed when scroll changes
-            if (ball != null && !isDragging && !timer.IsEnabled)
+            if (activeBallIndex >= 0 && activeBallIndex < balls.Count && !isDragging && !timer.IsEnabled)
             {
-                UpdateBallPosition();
-                UpdateInfoPanelPosition();
+                BallData activeBall = balls[activeBallIndex];
+                UpdateBallPosition(activeBall);
+                UpdateInfoPanel(activeBall);
+                UpdateInfoPanelPosition(activeBall);
             }
         }
         
@@ -672,9 +934,7 @@ namespace PhysicsSimLab
         {
             // Atualizar a escala com base no valor do slider
             scale = e.NewValue;
-            
-            // Atualizar a visualização
-            UpdateBallPosition();
+
             UpdateTrajectoryVisual();
             
         }
@@ -697,7 +957,8 @@ namespace PhysicsSimLab
                 string text = textBox.Text;
                 
                 // Aceitar formato com vírgula ou ponto para decimal
-                if (!string.IsNullOrEmpty(text) && !TryParseInvariant(text, out _))
+                double tempValue;
+                if (!string.IsNullOrEmpty(text) && !TryParseInvariant(text, out tempValue))
                 {
                     // Se não for um número válido, destacar em vermelho
                     textBox.Background = new SolidColorBrush(Colors.LightPink);
@@ -725,6 +986,176 @@ namespace PhysicsSimLab
                                   System.Globalization.NumberStyles.Any, 
                                   System.Globalization.CultureInfo.InvariantCulture, 
                                   out result);
+        }
+
+        // Método para adicionar uma nova bola
+        private void AddNewBall()
+        {
+            if (balls.Count >= MAX_BALLS)
+            {
+                MessageBox.Show($"Número máximo de bolas ({MAX_BALLS}) atingido.");
+                return;
+            }
+            
+            // Definir as propriedades da nova bola
+            BallData newBall = new BallData
+            {
+                X = 2,
+                Y = 10,
+                Vx = 6,
+                Vy = 15,
+                Mass = 1.0,
+                Restitution = 0.7,
+                Size = 30,
+                Color = ballColors[balls.Count % ballColors.Count]
+            };
+            
+            // Criar o elemento visual da bola
+            Ellipse ballVisual = new Ellipse
+            {
+                Width = newBall.Size,
+                Height = newBall.Size,
+                Fill = newBall.Color,
+                Stroke = Brushes.Black,
+                StrokeThickness = 2
+            };
+            
+            SimulationCanvas.Children.Add(ballVisual);
+            Canvas.SetZIndex(ballVisual, 100);
+            
+            // Criar a linha de trajetória
+            Polyline trajectory = new Polyline
+            {
+                Stroke = newBall.Color,
+                StrokeThickness = 2,
+                Opacity = 0.6
+            };
+            
+            SimulationCanvas.Children.Add(trajectory);
+            Canvas.SetZIndex(trajectory, 50);
+            
+            // Atualizar as referências
+            newBall.Visual = ballVisual;
+            newBall.Trajectory = trajectory;
+            
+            // Adicionar à lista de bolas
+            balls.Add(newBall);
+            
+            // Tornar esta bola a ativa
+            SelectBall(balls.Count - 1);
+            
+            // Atualizar a posição visual
+            UpdateBallPosition(newBall);
+            UpdateInfoPanel(newBall);
+            UpdateInfoPanelPosition(newBall);
+            
+            // Atualizar UI
+            UpdateBallSelectionUI();
+        }
+        
+        // Método para remover a bola ativa
+        private void RemoveActiveBall()
+        {
+            if (activeBallIndex < 0 || activeBallIndex >= balls.Count)
+                return;
+                
+            // Remover elementos visuais
+            if (balls[activeBallIndex].Visual != null)
+                SimulationCanvas.Children.Remove(balls[activeBallIndex].Visual);
+                
+            if (balls[activeBallIndex].Trajectory != null)
+                SimulationCanvas.Children.Remove(balls[activeBallIndex].Trajectory);
+                
+            // Remover da lista
+            balls.RemoveAt(activeBallIndex);
+            
+            // Ajustar índice ativo
+            if (balls.Count > 0)
+            {
+                activeBallIndex = Math.Max(0, activeBallIndex - 1);
+                SelectBall(activeBallIndex);
+            }
+            else
+            {
+                activeBallIndex = -1;
+            }
+            
+            // Atualizar UI
+            UpdateBallSelectionUI();
+        }
+        
+        // Método para selecionar uma bola
+        private void SelectBall(int index)
+        {
+            if (index < 0 || index >= balls.Count)
+                return;
+                
+            activeBallIndex = index;
+            
+            // Destacar visualmente a bola selecionada e normalizar as outras
+            for (int i = 0; i < balls.Count; i++)
+            {
+                if (balls[i].Visual != null)
+                {
+                    balls[i].Visual.StrokeThickness = (i == activeBallIndex) ? 3 : 1;
+                }
+            }
+            
+            // Atualizar os controles de UI com os valores da bola selecionada
+            if (balls[activeBallIndex].Visual != null)
+            {
+                // Preencher os controles de propriedades
+                MassTextBox.Text = balls[activeBallIndex].Mass.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+                VxTextBox.Text = balls[activeBallIndex].Vx.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+                VyTextBox.Text = balls[activeBallIndex].Vy.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+                RestituicaoTextBox.Text = balls[activeBallIndex].Restitution.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+                BallSizeTextBox.Text = balls[activeBallIndex].Size.ToString("F0", System.Globalization.CultureInfo.InvariantCulture);
+                
+                // Atualizar o painel de informações
+                UpdateInfoPanel(balls[activeBallIndex]);
+                UpdateInfoPanelPosition(balls[activeBallIndex]);
+            }
+        }
+        
+        private void UpdateBallSelectionUI()
+        {
+            // Este método atualizaria os controles de UI para seleção das bolas
+            // Como botões ou combobox que serão adicionados ao XAML
+            BallSelector.Items.Clear();
+            
+            for (int i = 0; i < balls.Count; i++)
+            {
+                BallSelector.Items.Add($"Bola {i + 1}");
+            }
+            
+            if (activeBallIndex >= 0 && activeBallIndex < balls.Count)
+            {
+                BallSelector.SelectedIndex = activeBallIndex;
+            }
+            
+            // Ativar/desativar os botões conforme necessário
+            RemoveBallButton.IsEnabled = balls.Count > 0;
+            AddBallButton.IsEnabled = balls.Count < MAX_BALLS;
+        }
+
+        // Event handlers para novos botões
+        private void AddBallButton_Click(object sender, RoutedEventArgs e)
+        {
+            AddNewBall();
+        }
+        
+        private void RemoveBallButton_Click(object sender, RoutedEventArgs e)
+        {
+            RemoveActiveBall();
+        }
+        
+        private void BallSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            int selectedIndex = BallSelector.SelectedIndex;
+            if (selectedIndex >= 0 && selectedIndex < balls.Count)
+            {
+                SelectBall(selectedIndex);
+            }
         }
     }
 }

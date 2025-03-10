@@ -36,6 +36,10 @@
             <TextBox x:Name="VyTextBox" Text="15" Width="40" Margin="5"/>
             <Label Content="Coef. Restituição:" VerticalAlignment="Center"/>
             <TextBox x:Name="RestituicaoTextBox" Text="0.7" Width="40" Margin="5"/>
+            <Separator Width="20" Margin="5"/>
+            <ComboBox x:Name="BallSelector" Width="100" SelectionChanged="BallSelector_SelectionChanged" Margin="5"/>
+            <Button x:Name="AddBallButton" Content="+" Width="30" Click="AddBallButton_Click" Margin="5" ToolTip="Adicionar Nova Bola"/>
+            <Button x:Name="RemoveBallButton" Content="-" Width="30" Click="RemoveBallButton_Click" Margin="5" ToolTip="Remover Bola Atual"/>
         </StackPanel>
 
         <Border Grid.Row="1" Grid.Column="0" BorderBrush="Black" BorderThickness="2" Margin="10,5,10,10" Background="#EAEAEA">
