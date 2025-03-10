@@ -1,11 +1,8 @@
 ﻿using System.Windows;
 
-namespace PhysicsSimLab
-{
-    /// <summary>
-    /// Interação lógica para App.xaml
-    /// </summary>
-    public partial class App : Application
-    {
-    }
-}
+namespace PhysicsSimLab;
+
+/// <summary>
+/// Interaction logic for App.xaml
+/// </summary>
+public partial class App : Application { }
