@@ -7,6 +7,51 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
     <Grid>
-        
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Painel de Controles -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="5">
+            <Button x:Name="StartButton" Content="Iniciar" Width="96" Click="StartButton_Click"/>
+            <Button x:Name="ResetButton" Content="Resetar" Width="80" Margin="5" Click="ResetButton_Click"/>
+            <Separator Width="20" Margin="5"/>
+            <Label Content="Velocidade X:" VerticalAlignment="Center"/>
+            <TextBox x:Name="VxTextBox" Text="6" Width="40" Margin="5"/>
+            <Label Content="Velocidade Y:" VerticalAlignment="Center"/>
+            <TextBox x:Name="VyTextBox" Text="15" Width="40" Margin="5"/>
+            <Label Content="Coef. Restituição:" VerticalAlignment="Center"/>
+            <TextBox x:Name="RestituicaoTextBox" Text="0.7" Width="40" Margin="5"/>
+        </StackPanel>
+
+        <!-- Canvas para a simulação com ScrollViewer para camera follow -->
+        <Border Grid.Row="1" BorderBrush="Black" BorderThickness="2" Margin="10" Background="#EAEAEA">
+            <ScrollViewer x:Name="SimulationScroller" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
+                <Canvas x:Name="SimulationCanvas" Background="#EAEAEA" Width="2000" Height="1000"
+                       MouseLeftButtonDown="SimulationCanvas_MouseLeftButtonDown" 
+                       MouseMove="SimulationCanvas_MouseMove"
+                       MouseLeftButtonUp="SimulationCanvas_MouseLeftButtonUp">
+
+                    <!-- Linha de referência do solo -->
+                    <Rectangle x:Name="GroundLine" Fill="Green" Height="5" Width="{Binding ElementName=SimulationCanvas, Path=Width}" 
+                             Canvas.Left="0" Canvas.ZIndex="1"/>
+
+                    <!-- Indicador de posicionamento inicial -->
+                    <TextBlock x:Name="PositioningHint" 
+                              Text="Clique e arraste para posicionar a bola inicial" 
+                              Canvas.Left="50" Canvas.Top="50" 
+                              FontWeight="Bold" Foreground="Blue" Visibility="Visible"/>
+
+                    <!-- Painel de informações que seguirá a bola -->
+                    <Border x:Name="InfoPanel" Background="White" BorderBrush="Black" BorderThickness="1" 
+                          Padding="5" CornerRadius="5" Canvas.ZIndex="100">
+                        <StackPanel>
+                            <TextBlock x:Name="InfoTextBlock" FontFamily="Consolas" FontWeight="Bold"/>
+                        </StackPanel>
+                    </Border>
+                </Canvas>
+            </ScrollViewer>
+        </Border>
     </Grid>
 </Window>
