@@ -27,8 +27,8 @@
         </Grid.ColumnDefinitions>
 
         <StackPanel Grid.Row="0" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Left" Margin="10,5,0,5" Width="885">
-            <Button x:Name="StartButton" Content="Iniciar" Width="96" Click="StartButton_Click" Height="20"/>
-            <Button x:Name="ResetButton" Content="Resetar" Width="80" Margin="5" Click="ResetButton_Click"/>
+            <Button x:Name="StartButton" Content="Iniciar" Width="80" Click="StartButton_Click" Height="20" Margin="0,0,10,0"/>
+            <Button x:Name="ResetButton" Content="Reiniciar" Width="80" Click="ResetButton_Click" Height="20"/>
             <Separator Width="20" Margin="5"/>
             <Label Content="Velocidade X:" VerticalAlignment="Center"/>
             <TextBox x:Name="VxTextBox" Text="6" Width="40" Margin="5"/>

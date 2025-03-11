@@ -7,6 +7,9 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using PhysicsSimLab.Models;
+using PhysicsSimLab.Services;
+using static PhysicsSimLab.Helpers.MathHelper;
 
 namespace PhysicsSimLab
 {
@@ -15,38 +18,6 @@ namespace PhysicsSimLab
     /// </summary>
     public partial class MainWindow : Window
     {
-        private double g = 9.81;
-        
-        private class BallData
-        {
-            public double X { get; set; }
-            public double Y { get; set; }
-            public double Vx { get; set; }
-            public double Vy { get; set; }
-            public double Mass { get; set; }
-            public double Restitution { get; set; }
-            public double Size { get; set; }
-            public SolidColorBrush Color { get; set; }
-            public Ellipse? Visual { get; set; }
-            public Polyline? Trajectory { get; set; }
-            public List<Point> TrajectoryPoints { get; set; } = new List<Point>();
-            
-            public BallData Clone()
-            {
-                return new BallData
-                {
-                    X = this.X,
-                    Y = this.Y,
-                    Vx = this.Vx,
-                    Vy = this.Vy,
-                    Mass = this.Mass,
-                    Restitution = this.Restitution,
-                    Size = this.Size,
-                    Color = new SolidColorBrush(this.Color.Color)
-                };
-            }
-        }
-        
         private List<BallData> balls = new List<BallData>();
         private int activeBallIndex = -1;
         private const int MAX_BALLS = 5;
@@ -60,36 +31,25 @@ namespace PhysicsSimLab
             new SolidColorBrush(Colors.Purple)
         };
         
-        private double time = 0;
-        private readonly double dt = 0.016;
-        private double atritoHorizontal = 0.95;
-        private double airResistance = 0.01;
-        
-        private Ellipse? ball;
-        private readonly List<Point> trajectory = new List<Point>();
-        private Polyline? trajectoryLine;
-        private DispatcherTimer timer;
-        private Line? yAxisLine;
-        private Line? xAxisLine;
-        private readonly List<UIElement> yAxisMarkings = new List<UIElement>(); 
-        private readonly List<UIElement> xAxisMarkings = new List<UIElement>();
-        
-        private double scale = 10;
-        private double groundY;
+        private PhysicsService physicsService;
+        private VisualizationService visualizationService;
+        private SimulationService simulationService;
         
         private bool isDragging = false;
-        private bool simulationStarted = false;
-        
         private double cameraOffsetX = 0;
         private double cameraOffsetY = 0;
+        
+        // References to removed variables
+        private Polyline? trajectoryLine;
+        private List<Point> trajectory = new List<Point>();
+        private Line? xAxisLine;
+        private Line? yAxisLine;
+        private List<UIElement> xAxisMarkings = new List<UIElement>();
+        private List<UIElement> yAxisMarkings = new List<UIElement>();
         
         public MainWindow()
         {
             InitializeComponent();
-            
-            timer = new DispatcherTimer();
-            timer.Tick += TimerTick;
-            timer.Interval = TimeSpan.FromSeconds(dt);
             
             Loaded += MainWindow_Loaded;
             SizeChanged += MainWindow_SizeChanged;
@@ -97,59 +57,34 @@ namespace PhysicsSimLab
             WindowState = WindowState.Maximized;
         }
 
-        private void TimerTick(object? sender, EventArgs e)
-        {
-            if (balls.Count == 0)
-            {
-                timer.Stop();
-                return;
-            }
-            
-            bool allStopped = true;
-            
-            foreach (var ball in balls)
-            {
-                if (ball.Visual == null || ball.Trajectory == null) 
-                    continue;
-                
-                UpdatePhysics(ball);
-                
-                UpdateBallPosition(ball);
-                
-                AddTrajectoryPoint(ball);
-                
-                if (Math.Abs(ball.Vy) >= 0.1 || Math.Abs(ball.Vx) >= 0.1 || ball.Y > 0.01)
-                {
-                    allStopped = false;
-                }
-            }
-            
-            if (activeBallIndex >= 0 && activeBallIndex < balls.Count)
-            {
-                UpdateInfoPanel(balls[activeBallIndex]);
-                UpdateInfoPanelPosition(balls[activeBallIndex]);
-            }
-            
-            if (activeBallIndex >= 0 && activeBallIndex < balls.Count)
-            {
-                UpdateCamera(balls[activeBallIndex]);
-            }
-            
-            time += dt;
-            
-            if (allStopped || time >= 30)
-            {
-                timer.Stop();
-                StartButton.Content = "Reiniciar";
-            }
-        }
-
         private void MainWindow_Loaded(object? sender, RoutedEventArgs e)
         {
             SetupSimulationCanvas();
             
+            physicsService = new PhysicsService();
+            visualizationService = new VisualizationService(SimulationCanvas);
+            simulationService = new SimulationService(physicsService, visualizationService, balls);
+            
+            simulationService.TimeUpdated += (time) => {
+                if (activeBallIndex >= 0 && activeBallIndex < balls.Count)
+                {
+                    UpdateInfoPanel(balls[activeBallIndex], time);
+                    UpdateInfoPanelPosition(balls[activeBallIndex]);
+                }
+                
+                // Update camera for active ball
+                if (activeBallIndex >= 0 && activeBallIndex < balls.Count)
+                {
+                    UpdateCamera(balls[activeBallIndex]);
+                }
+            };
+            
+            simulationService.SimulationStopped += () => {
+                StartButton.Content = "Reiniciar";
+            };
+            
             Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() => {
-                CreateCoordinateSystem();
+                visualizationService.CreateCoordinateSystem();
                 AddNewBall();
                 CenterCamera();
             }));
@@ -178,7 +113,7 @@ namespace PhysicsSimLab
             SimulationCanvas.Width = Math.Max(ActualWidth * 3, 3000);
             SimulationCanvas.Height = Math.Max(ActualHeight * 2, 1000);
             
-            groundY = double.IsNaN(SimulationCanvas.Height) ? 500 : SimulationCanvas.Height - 50;
+            double groundY = double.IsNaN(SimulationCanvas.Height) ? 500 : SimulationCanvas.Height - 50;
             Canvas.SetTop(GroundLine, groundY);
             GroundLine.Width = SimulationCanvas.Width;
             
@@ -186,192 +121,66 @@ namespace PhysicsSimLab
             {
                 SimulationScroller.ScrollToHorizontalOffset(0);
             }
-        }
-        
-        private void CreateCoordinateSystem()
-        {
-            if (double.IsNaN(groundY) || double.IsInfinity(groundY))
-            {
-                groundY = SimulationCanvas.ActualHeight > 50 ? SimulationCanvas.ActualHeight - 50 : 500;
-            }
-
-            ClearCoordinateSystem();
             
-            try
+            if (visualizationService != null)
             {
-                yAxisLine = new Line
-                {
-                    X1 = 0,
-                    Y1 = 0,
-                    X2 = 0,
-                    Y2 = groundY,
-                    Stroke = Brushes.DarkBlue,
-                    StrokeThickness = 3 
-                };
-                
-                SimulationCanvas.Children.Add(yAxisLine);
-                Canvas.SetZIndex(yAxisLine, 90); 
-                Canvas.SetLeft(yAxisLine, 0); 
-
-                xAxisLine = new Line
-                {
-                    X1 = 0,
-                    X2 = SimulationCanvas.Width,
-                    Y1 = groundY,
-                    Y2 = groundY,
-                    Stroke = Brushes.DarkBlue, 
-                    StrokeThickness = 3 
-                };
-                
-                SimulationCanvas.Children.Add(xAxisLine);
-                Canvas.SetZIndex(xAxisLine, 90);
-                
-                for (int i = 5; i <= 100; i += 5)
-                {
-                    double xPos = i * scale;
-                    
-                    Line tick = new Line
-                    {
-                        X1 = xPos,
-                        X2 = xPos,
-                        Y1 = groundY - 5,
-                        Y2 = groundY + 5,
-                        Stroke = Brushes.Black,
-                        StrokeThickness = 1
-                    };
-                    
-                    TextBlock tickLabel = new TextBlock
-                    {
-                        Text = i.ToString(),
-                        FontSize = 10
-                    };
-                    
-                    Canvas.SetLeft(tickLabel, xPos - 8);
-                    Canvas.SetTop(tickLabel, groundY + 8);
-                    
-                    SimulationCanvas.Children.Add(tick);
-                    SimulationCanvas.Children.Add(tickLabel);
-                    Canvas.SetZIndex(tick, 50);
-                    Canvas.SetZIndex(tickLabel, 50);
-                    
-                    xAxisMarkings.Add(tick);
-                    xAxisMarkings.Add(tickLabel);
-                }
-                
-                TextBlock originLabel = new TextBlock
-                {
-                    Text = "0",
-                    FontSize = 10
-                };
-                Canvas.SetLeft(originLabel, -15);
-                Canvas.SetTop(originLabel, groundY + 8);
-                SimulationCanvas.Children.Add(originLabel);
-                Canvas.SetZIndex(originLabel, 50);
-                xAxisMarkings.Add(originLabel);
+                visualizationService.GroundY = groundY;
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error creating coordinate system: {ex.Message}");
-            }
-        }
-        
-        private void ClearCoordinateSystem()
-        {
-            foreach (var mark in yAxisMarkings)
-            {
-                SimulationCanvas.Children.Remove(mark);
-            }
-            yAxisMarkings.Clear();
-            
-            if (yAxisLine != null)
-            {
-                SimulationCanvas.Children.Remove(yAxisLine);
-            }
-            
-            foreach (var mark in xAxisMarkings)
-            {
-                SimulationCanvas.Children.Remove(mark);
-            }
-            xAxisMarkings.Clear();
         }
         
         private void UpdateScaleAndLimits()
         {
+            if (visualizationService == null) return;
+            
             if (SimulationScroller.ActualWidth > 0 && SimulationScroller.ActualHeight > 0)
             {
-                scale = Math.Min(SimulationScroller.ActualWidth / 80, SimulationScroller.ActualHeight / 40);
+                visualizationService.Scale = Math.Min(SimulationScroller.ActualWidth / 80, SimulationScroller.ActualHeight / 40);
             }
             
             if (double.IsNaN(SimulationCanvas.Height))
                 return;
                 
-            groundY = SimulationCanvas.Height - 50;
-            Canvas.SetTop(GroundLine, groundY);
+            visualizationService.GroundY = SimulationCanvas.Height - 50;
+            Canvas.SetTop(GroundLine, visualizationService.GroundY);
             GroundLine.Width = SimulationCanvas.Width;
             
-            UpdateCoordinateSystem();
+            visualizationService.CreateCoordinateSystem();
             
             foreach (var ball in balls)
             {
                 if (ball.Visual != null)
                 {
-                    UpdateBallPosition(ball);
+                    visualizationService.UpdateBallPosition(ball);
                 }
             }
-        }
-        
-        private void UpdateCoordinateSystem()
-        {
-            ClearCoordinateSystem();
-            CreateCoordinateSystem();
-        }
-        
-        private void InitializeSimulation()
-        {
-            if (trajectoryLine != null)
-                SimulationCanvas.Children.Remove(trajectoryLine);
-                
-            if (ball != null)
-                SimulationCanvas.Children.Remove(ball);
-                
-            trajectory.Clear();
-            
-            if (!TryParseInvariant(GravityTextBox.Text, out g) || g <= 0)
-                g = 9.81;
-                
-            if (!TryParseInvariant(AirResistanceTextBox.Text, out airResistance))
-                airResistance = 0.01;
-                
-            if (!TryParseInvariant(FrictionTextBox.Text, out atritoHorizontal) || 
-                atritoHorizontal < 0 || atritoHorizontal > 1)
-                atritoHorizontal = 0.95;
         }
         
         private void ResetSimulation()
         {
-            timer.Stop();
+            simulationService.Stop();
             StartButton.Content = "Iniciar";
-            time = 0;
-            simulationStarted = false;
             
+            // Validação dos parâmetros
+            double g;
             if (!TryParseInvariant(GravityTextBox.Text, out g) || g <= 0)
                 g = 9.81;
+            physicsService.Gravity = g;
                 
+            double airResistance;
             if (!TryParseInvariant(AirResistanceTextBox.Text, out airResistance))
                 airResistance = 0.01;
+            physicsService.AirResistance = airResistance;
                 
+            double atritoHorizontal;
             if (!TryParseInvariant(FrictionTextBox.Text, out atritoHorizontal) || 
                 atritoHorizontal < 0 || atritoHorizontal > 1)
                 atritoHorizontal = 0.95;
+            physicsService.FrictionCoefficient = atritoHorizontal;
             
-            foreach (var ball in balls)
-            {
-                if (ball.Trajectory != null)
-                {
-                    ball.Trajectory.Points.Clear();
-                }
-            }
+            // Reset simulation
+            simulationService.Reset();
             
+            // Apply UI parameters
             ApplyUIParametersToBall();
             CenterCamera();
         }
@@ -392,11 +201,13 @@ namespace PhysicsSimLab
             if (!TryParseInvariant(VxTextBox.Text, out vx))
                 vx = 6;
             ball.Vx = vx;
+            ball.InitialVx = vx;
 
             double vy;
             if (!TryParseInvariant(VyTextBox.Text, out vy))
                 vy = 15;
             ball.Vy = vy;
+            ball.InitialVy = vy;
 
             double restitution;
             if (!TryParseInvariant(RestituicaoTextBox.Text, out restitution) ||
@@ -415,8 +226,8 @@ namespace PhysicsSimLab
                 ball.Visual.Height = ball.Size;
             }
 
-            UpdateBallPosition(ball);
-            UpdateInfoPanel(ball);
+            visualizationService.UpdateBallPosition(ball);
+            UpdateInfoPanel(ball, simulationService.CurrentTime);
             UpdateInfoPanelPosition(ball);
         }
         
@@ -427,15 +238,19 @@ namespace PhysicsSimLab
             try {
                 SimulationScroller.ScrollToHorizontalOffset(0);
                 
-                if (ball != null)
+                if (balls.Count > 0 && activeBallIndex >= 0 && activeBallIndex < balls.Count)
                 {
-                    double ballY = Canvas.GetTop(ball) + ball.Height / 2;
-                    cameraOffsetY = Math.Max(0, ballY - SimulationScroller.ViewportHeight / 2);
-                    SimulationScroller.ScrollToVerticalOffset(cameraOffsetY);
+                    BallData activeBall = balls[activeBallIndex];
+                    if (activeBall.Visual != null)
+                    {
+                        double ballY = Canvas.GetTop(activeBall.Visual) + activeBall.Visual.Height / 2;
+                        cameraOffsetY = Math.Max(0, ballY - SimulationScroller.ViewportHeight / 2);
+                        SimulationScroller.ScrollToVerticalOffset(cameraOffsetY);
+                    }
                 }
                 else
                 {
-                    double middleY = groundY / 2;
+                    double middleY = visualizationService.GroundY / 2;
                     SimulationScroller.ScrollToVerticalOffset(Math.Max(0, middleY - SimulationScroller.ViewportHeight / 2));
                 }
             }
@@ -448,69 +263,69 @@ namespace PhysicsSimLab
         
         private void StartButton_Click(object? sender, RoutedEventArgs e)
         {
-            if (timer.IsEnabled)
+            if (simulationService.IsRunning)
             {
-                timer.Stop();
+                simulationService.Stop();
                 StartButton.Content = "Continuar";
             }
             else
             {
-                timer.Start();
+                simulationService.Start();
                 StartButton.Content = "Pausar";
-                
-                if (!simulationStarted)
-                {
-                    simulationStarted = true;
-                }
             }
         }
         
         private void ResetButton_Click(object? sender, RoutedEventArgs e)
         {
-            timer.Stop();
+            simulationService.Stop();
             StartButton.Content = "Iniciar";
             ResetSimulation();
         }
         
         private void SimulationCanvas_MouseLeftButtonDown(object? sender, MouseButtonEventArgs e)
         {
-            if (simulationStarted || activeBallIndex < 0 || activeBallIndex >= balls.Count) return;
+            if (simulationService.IsRunning || activeBallIndex < 0 || activeBallIndex >= balls.Count) return;
             
             Point position = e.GetPosition(SimulationCanvas);
             isDragging = true;
             
             BallData activeBall = balls[activeBallIndex];
             
-            activeBall.X = position.X / scale;
-            activeBall.Y = (groundY - position.Y) / scale;
+            activeBall.X = position.X / visualizationService.Scale;
+            activeBall.Y = (visualizationService.GroundY - position.Y) / visualizationService.Scale;
             
             if (activeBall.Y < 0) activeBall.Y = 0;
             
-            UpdateBallPosition(activeBall);
-            UpdateInfoPanel(activeBall);
+            visualizationService.UpdateBallPosition(activeBall);
+            UpdateInfoPanel(activeBall, simulationService.CurrentTime);
             UpdateInfoPanelPosition(activeBall);
         }
         
         private void SimulationCanvas_MouseMove(object? sender, MouseEventArgs e)
         {
-            if (!isDragging || simulationStarted || activeBallIndex < 0 || activeBallIndex >= balls.Count) return;
+            if (!isDragging || simulationService.IsRunning || activeBallIndex < 0 || activeBallIndex >= balls.Count) return;
             
             Point position = e.GetPosition(SimulationCanvas);
             BallData activeBall = balls[activeBallIndex];
             
-            activeBall.X = position.X / scale;
-            activeBall.Y = (groundY - position.Y) / scale;
+            activeBall.X = position.X / visualizationService.Scale;
+            activeBall.Y = (visualizationService.GroundY - position.Y) / visualizationService.Scale;
             
             if (activeBall.Y < 0) activeBall.Y = 0;
             
-            UpdateBallPosition(activeBall);
-            UpdateInfoPanel(activeBall);
+            visualizationService.UpdateBallPosition(activeBall);
+            UpdateInfoPanel(activeBall, simulationService.CurrentTime);
             UpdateInfoPanelPosition(activeBall);
         }
         
         private void SimulationCanvas_MouseLeftButtonUp(object? sender, MouseButtonEventArgs e)
         {
             isDragging = false;
+            // Salva as posições iniciais quando a bola é solta
+            if (activeBallIndex >= 0 && activeBallIndex < balls.Count)
+            {
+                UpdateInitialPosition(balls[activeBallIndex]);
+            }
         }
         
         private void SimulationCanvas_MouseWheel(object? sender, MouseWheelEventArgs e)
@@ -526,23 +341,23 @@ namespace PhysicsSimLab
 
             Point mousePosition = e.GetPosition(SimulationCanvas);
 
-            double worldX = mousePosition.X / scale;
-            double worldY = (groundY - mousePosition.Y) / scale;
+            double worldX = mousePosition.X / visualizationService.Scale;
+            double worldY = (visualizationService.GroundY - mousePosition.Y) / visualizationService.Scale;
 
             if (e.Delta > 0)
             {
-                scale *= 1.1;
+                visualizationService.Scale *= 1.1;
             }
             else
             {
-                scale /= 1.1;
+                visualizationService.Scale /= 1.1;
             }
 
-            scale = Math.Max(1, Math.Min(scale, 50));
+            visualizationService.Scale = Math.Max(1, Math.Min(visualizationService.Scale, 50));
 
             foreach (var ball in balls)
             {
-                UpdateBallPosition(ball);
+                visualizationService.UpdateBallPosition(ball);
             }
 
             UpdateGroundPosition();
@@ -552,10 +367,10 @@ namespace PhysicsSimLab
                 UpdateTrajectoryVisual(ball);
             }
 
-            UpdateCoordinateSystem();
+            visualizationService.CreateCoordinateSystem();
 
-            double newMouseX = worldX * scale;
-            double newMouseY = groundY - worldY * scale;
+            double newMouseX = worldX * visualizationService.Scale;
+            double newMouseY = visualizationService.GroundY - worldY * visualizationService.Scale;
 
             SimulationScroller.ScrollToHorizontalOffset(SimulationScroller.HorizontalOffset + (newMouseX - mousePosition.X));
             SimulationScroller.ScrollToVerticalOffset(SimulationScroller.VerticalOffset + (newMouseY - mousePosition.Y));
@@ -582,93 +397,6 @@ namespace PhysicsSimLab
 
         #endregion
         
-        private void UpdatePhysics(BallData ball)
-        {
-            ball.X += ball.Vx * dt;
-            ball.Y += ball.Vy * dt - 0.5 * g * dt * dt;
-            
-            if (ball.X < 0)
-            {
-                ball.X = 0;
-                ball.Vx = -ball.Vx * ball.Restitution;
-            }
-            
-            double vTotal = Math.Sqrt(ball.Vx * ball.Vx + ball.Vy * ball.Vy);
-            if (vTotal > 0)
-            {
-                double dragForceMagnitude = airResistance * vTotal * vTotal;
-                double dragForceX = -dragForceMagnitude * ball.Vx / vTotal;
-                double dragForceY = -dragForceMagnitude * ball.Vy / vTotal;
-                
-                ball.Vx += dragForceX * dt;
-                ball.Vy += dragForceY * dt;
-            }
-            
-            ball.Vy -= g * dt;
-            
-            if (ball.Y <= 0.01 && ball.Vy < 0 && ball.Visual != null)
-            {
-                ball.Y = 0.01;
-                
-                double impactVelocity = Math.Abs(ball.Vy);
-                
-                ball.Vy = -ball.Vy * ball.Restitution;
-                
-                ball.Vx *= atritoHorizontal;
-                
-                if (impactVelocity > 2.0)
-                {
-                    try
-                    {
-                        double squashFactor = Math.Min(0.6 + (impactVelocity / 50), 0.8);
-                        double stretchFactor = 1.0 + (1.0 - squashFactor);
-                        
-                        ScaleTransform scaleTransform = new ScaleTransform(stretchFactor, squashFactor);
-                        ball.Visual.RenderTransform = scaleTransform;
-                        
-                        DispatcherTimer resetScale = new DispatcherTimer
-                        {
-                            Interval = TimeSpan.FromMilliseconds(50)
-                        };
-                        
-                        resetScale.Tick += (s, e) =>
-                        {
-                            if (ball.Visual != null)
-                            {
-                                ball.Visual.RenderTransform = null;
-                            }
-                            resetScale.Stop();
-                        };
-                        
-                        resetScale.Start();
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Error in collision handling: {ex.Message}");
-                        if (ball.Visual != null)
-                            ball.Visual.RenderTransform = null;
-                    }
-                }
-                
-                if (Math.Abs(ball.Vy) < 0.3)
-                    ball.Vy = 0;
-                    
-                if (Math.Abs(ball.Vx) < 0.3)
-                    ball.Vx = 0;
-            }
-        }
-        
-        private void UpdateBallPosition(BallData ball)
-        {
-            if (ball.Visual == null) return;
-            
-            double canvasX = ball.X * scale;
-            double canvasY = groundY - ball.Y * scale;
-            
-            Canvas.SetLeft(ball.Visual, canvasX - ball.Visual.Width / 2);
-            Canvas.SetTop(ball.Visual, canvasY - ball.Visual.Height / 2);
-        }
-
         private void UpdateCamera(BallData ball)
         {
             if (SimulationScroller == null || ball.Visual == null) return;
@@ -696,29 +424,12 @@ namespace PhysicsSimLab
                 SimulationScroller.ScrollToVerticalOffset(cameraOffsetY);
             }
         }
-
-        private void AddTrajectoryPoint(BallData ball)
-        {
-            if (ball.Trajectory == null) return;
-            
-            double canvasX = ball.X * scale;
-            double canvasY = groundY - ball.Y * scale;
-            
-            ball.TrajectoryPoints.Add(new Point(canvasX, canvasY));
-            
-            try {
-                ball.Trajectory.Points = new PointCollection(ball.TrajectoryPoints);
-            }
-            catch (Exception ex) {
-                Console.WriteLine($"Error updating trajectory points: {ex.Message}");
-            }
-        }
         
-        private void UpdateInfoPanel(BallData ball)
+        private void UpdateInfoPanel(BallData ball, double time)
         {
             double velocidadeTotal = Math.Sqrt(ball.Vx * ball.Vx + ball.Vy * ball.Vy);
-            double energiaCinetica = 0.5 * ball.Mass * velocidadeTotal * velocidadeTotal;
-            double energiaPotencial = ball.Mass * g * ball.Y;
+            double energiaCinetica = physicsService.CalculateKineticEnergy(ball);
+            double energiaPotencial = physicsService.CalculatePotentialEnergy(ball);
             double energiaTotal = energiaCinetica + energiaPotencial;
             
             InfoTextBlock.FontSize = 14;
@@ -767,25 +478,25 @@ namespace PhysicsSimLab
         
         private void UpdateGroundPosition()
         {
-            groundY = SimulationCanvas.Height - 50; 
-            Canvas.SetTop(GroundLine, groundY);
+            visualizationService.GroundY = SimulationCanvas.Height - 50; 
+            Canvas.SetTop(GroundLine, visualizationService.GroundY);
             GroundLine.Width = SimulationCanvas.Width;
         }
         
         private void SimulationScroller_ScrollChanged(object sender, ScrollChangedEventArgs e)
         {
-            if (activeBallIndex >= 0 && activeBallIndex < balls.Count && !isDragging && !timer.IsEnabled)
+            if (activeBallIndex >= 0 && activeBallIndex < balls.Count && !isDragging && !simulationService.IsRunning)
             {
                 BallData activeBall = balls[activeBallIndex];
-                UpdateBallPosition(activeBall);
-                UpdateInfoPanel(activeBall);
+                visualizationService.UpdateBallPosition(activeBall);
+                UpdateInfoPanel(activeBall, simulationService.CurrentTime);
                 UpdateInfoPanelPosition(activeBall);
             }
         }
         
         private void ZoomSlider_ValueChanged(object? sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            scale = e.NewValue;
+            visualizationService.Scale = e.NewValue;
             UpdateTrajectoryVisual();
         }
         
@@ -793,7 +504,7 @@ namespace PhysicsSimLab
         {
             if (!IsLoaded) return;
 
-            if (timer.IsEnabled)
+            if (simulationService != null && simulationService.IsRunning)
             {
                 return;
             }
@@ -818,16 +529,6 @@ namespace PhysicsSimLab
             ResetSimulation();
         }
 
-        private bool TryParseInvariant(string text, out double result)
-        {
-            string normalizedText = text.Replace(',', '.');
-            
-            return double.TryParse(normalizedText, 
-                                  System.Globalization.NumberStyles.Any, 
-                                  System.Globalization.CultureInfo.InvariantCulture, 
-                                  out result);
-        }
-
         private void AddNewBall()
         {
             if (balls.Count >= MAX_BALLS)
@@ -845,7 +546,11 @@ namespace PhysicsSimLab
                 Mass = 1.0,
                 Restitution = 0.7,
                 Size = 30,
-                Color = ballColors[balls.Count % ballColors.Count]
+                Color = ballColors[balls.Count % ballColors.Count],
+                InitialX = 2,
+                InitialY = 10,
+                InitialVx = 6,
+                InitialVy = 15
             };
             
             Ellipse ballVisual = new Ellipse
@@ -877,8 +582,8 @@ namespace PhysicsSimLab
             
             SelectBall(balls.Count - 1);
             
-            UpdateBallPosition(newBall);
-            UpdateInfoPanel(newBall);
+            visualizationService.UpdateBallPosition(newBall);
+            UpdateInfoPanel(newBall, simulationService.CurrentTime);
             UpdateInfoPanelPosition(newBall);
             
             UpdateBallSelectionUI();
@@ -933,7 +638,7 @@ namespace PhysicsSimLab
                 RestituicaoTextBox.Text = balls[activeBallIndex].Restitution.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
                 BallSizeTextBox.Text = balls[activeBallIndex].Size.ToString("F0", System.Globalization.CultureInfo.InvariantCulture);
                 
-                UpdateInfoPanel(balls[activeBallIndex]);
+                UpdateInfoPanel(balls[activeBallIndex], simulationService?.CurrentTime ?? 0);
                 UpdateInfoPanelPosition(balls[activeBallIndex]);
             }
         }
@@ -973,6 +678,14 @@ namespace PhysicsSimLab
             {
                 SelectBall(selectedIndex);
             }
+        }
+
+        private void UpdateInitialPosition(BallData ball)
+        {
+            ball.InitialX = ball.X;
+            ball.InitialY = ball.Y;
+            ball.InitialVx = ball.Vx;
+            ball.InitialVy = ball.Vy;
         }
     }
 }
