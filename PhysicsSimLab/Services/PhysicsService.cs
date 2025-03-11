@@ -1,9 +1,6 @@
 using System;
-using System.Windows;
 using System.Windows.Media;
-using System.Windows.Threading;
 using PhysicsSimLab.Models;
-using PhysicsSimLab.Helpers;
 
 namespace PhysicsSimLab.Services
 {
@@ -28,9 +25,11 @@ namespace PhysicsSimLab.Services
             double vTotal = Math.Sqrt(ball.Vx * ball.Vx + ball.Vy * ball.Vy);
             if (vTotal > 0)
             {
-                double dragForceMagnitude = AirResistance * vTotal * vTotal;
-                double dragForceX = -dragForceMagnitude * ball.Vx / vTotal;
-                double dragForceY = -dragForceMagnitude * ball.Vy / vTotal;
+                double sizeFactor = ball.Size / 30.0;
+                double dragForceMagnitude = AirResistance * vTotal * vTotal * sizeFactor * sizeFactor;
+                double dragAccelerationFactor = dragForceMagnitude / ball.Mass;
+                double dragForceX = -dragAccelerationFactor * ball.Vx / vTotal;
+                double dragForceY = -dragAccelerationFactor * ball.Vy / vTotal;
                 
                 ball.Vx += dragForceX * Dt;
                 ball.Vy += dragForceY * Dt;
@@ -41,28 +40,43 @@ namespace PhysicsSimLab.Services
 
         public void HandleGroundCollision(BallData ball, double groundLevel, Action<ScaleTransform> applyTransform)
         {
-            if (ball.Y <= groundLevel && ball.Vy < 0 && ball.Visual != null)
+            double effectiveGroundLevel = groundLevel + (ball.Size / 100.0);
+            
+            if (ball.Y <= effectiveGroundLevel && ball.Vy < 0 && ball.Visual != null)
             {
-                ball.Y = groundLevel;
+                ball.Y = effectiveGroundLevel;
                 
                 double impactVelocity = Math.Abs(ball.Vy);
+                double effectiveRestitution = ball.Restitution * (1.0 - 0.05 * Math.Min(ball.Mass - 1.0, 0.5));
                 
-                ball.Vy = -ball.Vy * ball.Restitution;
-                ball.Vx *= FrictionCoefficient;
+                ball.Vy = -ball.Vy * effectiveRestitution;
+                
+                double effectiveFriction = FrictionCoefficient * (1.0 - 0.02 * Math.Min(ball.Mass - 1.0, 1.0));
+                ball.Vx *= effectiveFriction;
                 
                 if (impactVelocity > 2.0)
                 {
-                    double squashFactor = Math.Min(0.6 + (impactVelocity / 50), 0.8);
-                    double stretchFactor = 1.0 + (1.0 - squashFactor);
-                    
-                    ScaleTransform scaleTransform = new ScaleTransform(stretchFactor, squashFactor);
-                    applyTransform(scaleTransform);
+                    try
+                    {
+                        double massFactor = Math.Max(0.7, Math.Min(1.0 / ball.Mass, 1.2));
+                        double squashFactor = Math.Min(0.6 + (impactVelocity / 50), 0.8) * massFactor;
+                        double stretchFactor = 1.0 + (1.0 - squashFactor);
+                        
+                        ScaleTransform scaleTransform = new ScaleTransform(stretchFactor, squashFactor);
+                        applyTransform(scaleTransform);
+                    }
+                    catch 
+                    {
+
+                    }
                 }
                 
-                if (Math.Abs(ball.Vy) < 0.3)
+                double stopThreshold = 0.3 - (0.05 * Math.Min(ball.Mass - 1.0, 0.25));
+                
+                if (Math.Abs(ball.Vy) < stopThreshold)
                     ball.Vy = 0;
                     
-                if (Math.Abs(ball.Vx) < 0.3)
+                if (Math.Abs(ball.Vx) < stopThreshold)
                     ball.Vx = 0;
             }
         }

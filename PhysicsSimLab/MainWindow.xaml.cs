@@ -72,7 +72,6 @@ namespace PhysicsSimLab
                     UpdateInfoPanelPosition(balls[activeBallIndex]);
                 }
                 
-                // Update camera for active ball
                 if (activeBallIndex >= 0 && activeBallIndex < balls.Count)
                 {
                     UpdateCamera(balls[activeBallIndex]);
@@ -100,6 +99,11 @@ namespace PhysicsSimLab
         private void MainWindow_SizeChanged(object? sender, SizeChangedEventArgs e)
         {
             UpdateScaleAndLimits();
+            
+            if (visualizationService != null)
+            {
+                visualizationService.UpdateGroundRect(SimulationCanvas.Width);
+            }
         }
         
         private void SetupSimulationCanvas()
@@ -109,9 +113,15 @@ namespace PhysicsSimLab
                 MessageBox.Show("Erro ao inicializar a simulação. Elementos de UI não encontrados.");
                 return;
             }
-
-            SimulationCanvas.Width = Math.Max(ActualWidth * 3, 3000);
-            SimulationCanvas.Height = Math.Max(ActualHeight * 2, 1000);
+            
+            SimulationCanvas.HorizontalAlignment = HorizontalAlignment.Stretch;
+            SimulationCanvas.VerticalAlignment = VerticalAlignment.Stretch;
+   
+            double viewportWidth = SimulationScroller.ViewportWidth > 0 ? SimulationScroller.ViewportWidth : ActualWidth;
+            double viewportHeight = SimulationScroller.ViewportHeight > 0 ? SimulationScroller.ViewportHeight : ActualHeight;
+            
+            SimulationCanvas.Width = Math.Max(viewportWidth * 3, 3000);
+            SimulationCanvas.Height = Math.Max(viewportHeight * 2, 1000);
             
             double groundY = double.IsNaN(SimulationCanvas.Height) ? 500 : SimulationCanvas.Height - 50;
             Canvas.SetTop(GroundLine, groundY);
@@ -160,7 +170,6 @@ namespace PhysicsSimLab
             simulationService.Stop();
             StartButton.Content = "Iniciar";
             
-            // Validação dos parâmetros
             double g;
             if (!TryParseInvariant(GravityTextBox.Text, out g) || g <= 0)
                 g = 9.81;
@@ -177,10 +186,8 @@ namespace PhysicsSimLab
                 atritoHorizontal = 0.95;
             physicsService.FrictionCoefficient = atritoHorizontal;
             
-            // Reset simulation
             simulationService.Reset();
             
-            // Apply UI parameters
             ApplyUIParametersToBall();
             CenterCamera();
         }
@@ -432,14 +439,22 @@ namespace PhysicsSimLab
             double energiaPotencial = physicsService.CalculatePotentialEnergy(ball);
             double energiaTotal = energiaCinetica + energiaPotencial;
             
+            string ballName = "Bola ?";
+            if (activeBallIndex >= 0 && activeBallIndex < balls.Count)
+            {
+                ballName = $"Bola {activeBallIndex + 1}";
+            }
+            
             InfoTextBlock.FontSize = 14;
             InfoTextBlock.FontWeight = FontWeights.SemiBold;
-            InfoTextBlock.Text = $"Tempo: {time:F2}s\n" +
+            InfoTextBlock.Text = $"{ballName}\n" +
+                                 $"Tempo: {time:F2}s\n" +
                                  $"Posição X: {ball.X:F1}m\n" +
                                  $"Altura: {ball.Y:F1}m\n" +
                                  $"Velocidade X: {ball.Vx:F1}m/s\n" +
                                  $"Velocidade Y: {ball.Vy:F1}m/s\n" +
                                  $"Massa: {ball.Mass:F1}kg\n" +
+                                 $"Tamanho: {ball.Size:F0}px\n" +
                                  $"E. Cinética: {energiaCinetica:F1}J\n" +
                                  $"E. Potencial: {energiaPotencial:F1}J\n" +
                                  $"E. Total: {energiaTotal:F1}J";
@@ -479,8 +494,13 @@ namespace PhysicsSimLab
         private void UpdateGroundPosition()
         {
             visualizationService.GroundY = SimulationCanvas.Height - 50; 
-            Canvas.SetTop(GroundLine, visualizationService.GroundY);
-            GroundLine.Width = SimulationCanvas.Width;
+
+            if (GroundLine != null)
+            {
+                GroundLine.Visibility = Visibility.Collapsed;
+            }
+            
+            visualizationService.UpdateGroundRect(SimulationCanvas.Width);
         }
         
         private void SimulationScroller_ScrollChanged(object sender, ScrollChangedEventArgs e)
@@ -686,6 +706,36 @@ namespace PhysicsSimLab
             ball.InitialY = ball.Y;
             ball.InitialVx = ball.Vx;
             ball.InitialVy = ball.Vy;
+        }
+
+        private void MenuItemSimular_Click(object sender, RoutedEventArgs e)
+        {
+            // Reutilizar a lógica existente do botão iniciar/pausar
+            StartButton_Click(sender, e);
+        }
+
+        private void MenuItemResetar_Click(object sender, RoutedEventArgs e)
+        {
+            // Reutilizar a lógica existente do botão resetar
+            ResetButton_Click(sender, e);
+        }
+
+        private void MenuItemAdicionarBola_Click(object sender, RoutedEventArgs e)
+        {
+            // Reutilizar a lógica existente do botão adicionar bola
+            AddBallButton_Click(sender, e);
+        }
+
+        private void MenuItemRemoverBola_Click(object sender, RoutedEventArgs e)
+        {
+            // Reutilizar a lógica existente do botão remover bola
+            RemoveBallButton_Click(sender, e);
+        }
+
+        private void MenuItemSair_Click(object sender, RoutedEventArgs e)
+        {
+            // Fechar a aplicação
+            Close();
         }
     }
 }
