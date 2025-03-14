@@ -328,7 +328,6 @@ namespace PhysicsSimLab.Views
         private void SimulationCanvas_MouseLeftButtonUp(object? sender, MouseButtonEventArgs e)
         {
             isDragging = false;
-            // Salva as posições iniciais quando a bola é solta
             if (activeBallIndex >= 0 && activeBallIndex < balls.Count)
             {
                 UpdateInitialPosition(balls[activeBallIndex]);
@@ -710,31 +709,26 @@ namespace PhysicsSimLab.Views
 
         private void MenuItemSimular_Click(object sender, RoutedEventArgs e)
         {
-            // Reutilizar a lógica existente do botão iniciar/pausar
             StartButton_Click(sender, e);
         }
 
         private void MenuItemResetar_Click(object sender, RoutedEventArgs e)
         {
-            // Reutilizar a lógica existente do botão resetar
             ResetButton_Click(sender, e);
         }
 
         private void MenuItemAdicionarBola_Click(object sender, RoutedEventArgs e)
         {
-            // Reutilizar a lógica existente do botão adicionar bola
             AddBallButton_Click(sender, e);
         }
 
         private void MenuItemRemoverBola_Click(object sender, RoutedEventArgs e)
         {
-            // Reutilizar a lógica existente do botão remover bola
             RemoveBallButton_Click(sender, e);
         }
 
         private void MenuItemSair_Click(object sender, RoutedEventArgs e)
         {
-            // Fechar a aplicação
             Close();
         }
     }

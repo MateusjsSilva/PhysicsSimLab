@@ -51,7 +51,6 @@ namespace PhysicsSimLab.Services
             time = 0;
             simulationStarted = false;
             
-            // Reset balls to initial positions
             foreach (var ball in balls)
             {
                 visualizationService.ClearTrajectory(ball);

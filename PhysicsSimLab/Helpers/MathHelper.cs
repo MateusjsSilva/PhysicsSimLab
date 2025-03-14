@@ -1,4 +1,3 @@
-using System;
 using System.Globalization;
 
 namespace PhysicsSimLab.Helpers
@@ -9,10 +8,7 @@ namespace PhysicsSimLab.Helpers
         {
             string normalizedText = text.Replace(',', '.');
             
-            return double.TryParse(normalizedText, 
-                                  NumberStyles.Any, 
-                                  CultureInfo.InvariantCulture, 
-                                  out result);
+            return double.TryParse(normalizedText, NumberStyles.Any, CultureInfo.InvariantCulture, out result);
         }
         
         public static string FormatInvariant(double value, string format)

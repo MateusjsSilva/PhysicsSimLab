@@ -81,23 +81,20 @@ namespace PhysicsSimLab.Services
             
             try
             {
-                // Criar um retângulo para representar o chão
                 if (groundRectangle != null)
                 {
                     simulationCanvas.Children.Remove(groundRectangle);
                 }
                 
-                // Garantir que a altura do retângulo do chão seja suficiente para cobrir
-                // toda a área abaixo da linha do chão até o final do canvas, com margem extra
-                double groundRectHeight = simulationCanvas.Height - groundY + 1000; // Adicionar margem extra
-                
+                double groundRectHeight = simulationCanvas.Height - groundY + 1000;
+
                 groundRectangle = new Rectangle
                 {
                     Width = simulationCanvas.Width,
                     Height = groundRectHeight,
                     Fill = new LinearGradientBrush(
-                        Color.FromRgb(139, 69, 19),  // Terra escura no topo
-                        Color.FromRgb(210, 180, 140), // Terra mais clara embaixo
+                        Color.FromRgb(139, 69, 19),
+                        Color.FromRgb(210, 180, 140),
                         40),
                     Stroke = Brushes.Black,
                     StrokeThickness = 1
@@ -106,7 +103,7 @@ namespace PhysicsSimLab.Services
                 simulationCanvas.Children.Add(groundRectangle);
                 Canvas.SetTop(groundRectangle, groundY);
                 Canvas.SetLeft(groundRectangle, 0);
-                Canvas.SetZIndex(groundRectangle, 5); // Atrás das bolas mas à frente do fundo
+                Canvas.SetZIndex(groundRectangle, 5);
                 
                 xAxisLine = new Line
                 {
@@ -121,7 +118,6 @@ namespace PhysicsSimLab.Services
                 simulationCanvas.Children.Add(xAxisLine);
                 Canvas.SetZIndex(xAxisLine, 90);
                 
-                // Create X-axis markings
                 for (int i = 5; i <= 100; i += 5)
                 {
                     double xPos = i * scale;
@@ -174,13 +170,10 @@ namespace PhysicsSimLab.Services
         {
             if (groundRectangle != null)
             {
-                // Atualiza a largura do retângulo
                 groundRectangle.Width = width;
                 
-                // Também atualiza a altura para garantir que cubra até o fim do canvas
-                groundRectangle.Height = simulationCanvas.Height - groundY + 1000; // Adicionar margem extra
+                groundRectangle.Height = simulationCanvas.Height - groundY + 1000;
                 
-                // Garante que a posição vertical está correta
                 Canvas.SetTop(groundRectangle, groundY);
                 Canvas.SetLeft(groundRectangle, 0);
             }
