@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
@@ -11,7 +11,7 @@ using PhysicsSimLab.Models;
 using PhysicsSimLab.Services;
 using static PhysicsSimLab.Helpers.MathHelper;
 
-namespace PhysicsSimLab
+namespace PhysicsSimLab.Views
 {
     /// <summary>
     /// Interação lógica para MainWindow.xam
