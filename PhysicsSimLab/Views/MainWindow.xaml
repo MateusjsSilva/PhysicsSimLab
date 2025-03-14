@@ -5,15 +5,104 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PhysicsSimLab"
         mc:Ignorable="d"
-        Title="Simulação de Lançamento" Height="627" Width="957">
+        Title="PhysicsSimLab" Height="627" Width="957" Icon="/Assets/logo.png" 
+        WindowStartupLocation="CenterScreen" 
+        ResizeMode="CanResize"
+        WindowState="Normal"
+        WindowStyle="None" AllowsTransparency="True" Background="White">
     <Window.Resources>
         <Style x:Key="ThinScrollBar" TargetType="{x:Type ScrollBar}">
             <Setter Property="Width" Value="2" />
             <Setter Property="Height" Value="2" />
         </Style>
+
+        <!-- Base style for window buttons -->
+        <Style x:Key="WindowButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Width" Value="46"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Minimize button style -->
+        <Style x:Key="MinimizeButtonStyle" TargetType="Button" BasedOn="{StaticResource WindowButtonStyle}">
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#3FFFFFFF"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#7FFFFFFF"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Maximize button style -->
+        <Style x:Key="MaximizeButtonStyle" TargetType="Button" BasedOn="{StaticResource WindowButtonStyle}">
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#BFBFBF"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#7FFFFFFF"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Close button style -->
+        <Style x:Key="CloseButtonStyle" TargetType="Button" BasedOn="{StaticResource WindowButtonStyle}">
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#E81123"/>
+                </Trigger>
+                <Trigger Property="IsPressed" Value="True">
+                    <Setter Property="Background" Value="#8C0A15"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
     </Window.Resources>
 
     <DockPanel>
+        <Border Background="#FF1E2640" DockPanel.Dock="Top" Height="40">
+            <Grid Margin="10,0,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Orientation="Horizontal" Grid.Column="0" VerticalAlignment="Center">
+                    <Image Source="/Assets/logo.png" Width="22" Height="21" Margin="0,0,5,0"/>
+                    <TextBlock Text="PhysicsSimLab" VerticalAlignment="Center" Foreground="White" FontSize="13" Margin="5,0,0,0"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Grid.Column="2" HorizontalAlignment="Right">
+                    <Button Style="{StaticResource MinimizeButtonStyle}" Click="MinimizeButton_Click" Height="39">
+                        <TextBlock Text="&#xE949;" FontSize="10"/>
+                    </Button>
+                    <Button Style="{StaticResource MaximizeButtonStyle}" Click="MaximizeButton_Click" Height="39">
+                        <TextBlock x:Name="MaximizeIcon" Text="&#xE739;" FontSize="10"/>
+                    </Button>
+                    <Button Style="{StaticResource CloseButtonStyle}" Click="CloseButton_Click" Height="39">
+                        <TextBlock Text="&#xE106;" FontSize="10"/>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
         <Menu DockPanel.Dock="Top" Background="White">
             <MenuItem Header="_Arquivo" Margin="10,0,0,0">
                 <MenuItem Header="_Sair" Click="MenuItemSair_Click"/>

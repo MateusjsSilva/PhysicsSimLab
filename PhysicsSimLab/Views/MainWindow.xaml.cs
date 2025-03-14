@@ -10,6 +10,8 @@ using System.Windows.Threading;
 using PhysicsSimLab.Models;
 using PhysicsSimLab.Services;
 using static PhysicsSimLab.Helpers.MathHelper;
+using System.Runtime.InteropServices;
+using System.Windows.Interop;
 
 namespace PhysicsSimLab.Views
 {
@@ -18,6 +20,42 @@ namespace PhysicsSimLab.Views
     /// </summary>
     public partial class MainWindow : Window
     {
+        // Adicionar estas APIs do Windows para maximizar corretamente e capturar mensagens do sistema
+        [DllImport("user32.dll")]
+        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr GetForegroundWindow();
+
+        private const int SW_MAXIMIZE = 3;
+        private const int WM_SYSCOMMAND = 0x0112;
+        private const int SC_MAXIMIZE = 0xF030;
+        private const int WM_GETMINMAXINFO = 0x0024;
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct MINMAXINFO
+        {
+            public POINT ptReserved;
+            public POINT ptMaxSize;
+            public POINT ptMaxPosition;
+            public POINT ptMinTrackSize;
+            public POINT ptMaxTrackSize;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct POINT
+        {
+            public int x;
+            public int y;
+            public POINT(int x, int y)
+            {
+                this.x = x;
+                this.y = y;
+            }
+        }
+
+        private HwndSource _hwndSource;
+
         private List<BallData> balls = new List<BallData>();
         private int activeBallIndex = -1;
         private const int MAX_BALLS = 5;
@@ -53,12 +91,72 @@ namespace PhysicsSimLab.Views
             
             Loaded += MainWindow_Loaded;
             SizeChanged += MainWindow_SizeChanged;
+            MouseLeftButtonDown += MainWindow_MouseLeftButtonDown;
+            StateChanged += MainWindow_StateChanged;
+            SourceInitialized += MainWindow_SourceInitialized;
+        }
+
+        private void MainWindow_SourceInitialized(object? sender, EventArgs e)
+        {
+            _hwndSource = PresentationSource.FromVisual(this) as HwndSource;
+            if (_hwndSource != null)
+            {
+                _hwndSource.AddHook(WndProc);
+            }
+        }
+
+        private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            if (msg == WM_SYSCOMMAND && (wParam.ToInt32() & 0xFFF0) == SC_MAXIMIZE)
+            {
+                // Impedir maximização padrão e aplicar nossa própria
+                MaximizeWindowWithTaskbar();
+                handled = true;
+            }
+            else if (msg == WM_GETMINMAXINFO)
+            {
+                // Definir tamanhos máximos para impedir que a janela cubra a barra de tarefas
+                var workArea = SystemParameters.WorkArea;
+                
+                MINMAXINFO mmi = Marshal.PtrToStructure<MINMAXINFO>(lParam);
+                
+                mmi.ptMaxPosition.x = (int)workArea.Left;
+                mmi.ptMaxPosition.y = (int)workArea.Top;
+                mmi.ptMaxSize.x = (int)workArea.Width;
+                mmi.ptMaxSize.y = (int)workArea.Height;
+                
+                Marshal.StructureToPtr(mmi, lParam, true);
+                handled = true;
+            }
             
-            WindowState = WindowState.Maximized;
+            return IntPtr.Zero;
+        }
+
+        private void MaximizeWindowWithTaskbar()
+        {
+            var workArea = SystemParameters.WorkArea;
+            Left = workArea.Left;
+            Top = workArea.Top;
+            Width = workArea.Width;
+            Height = workArea.Height;
+            
+            // Atualizar ícone para mostrar o estado "restaurar"
+            if (MaximizeIcon != null)
+            {
+                MaximizeIcon.Text = "\uE923";  // Ícone de restaurar
+            }
         }
 
         private void MainWindow_Loaded(object? sender, RoutedEventArgs e)
         {
+            // Maximizar a janela respeitando a barra de tarefas
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() => {
+                MaximizeWindowWithTaskbar();
+                
+                // Sinalizar internamente que estamos "maximizados"
+                WindowState = WindowState.Normal; // Mantemos Normal porque estamos gerenciando manualmente o tamanho
+            }));
+
             SetupSimulationCanvas();
             
             physicsService = new PhysicsService();
@@ -728,6 +826,59 @@ namespace PhysicsSimLab.Views
         }
 
         private void MenuItemSair_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
+
+        private void MainWindow_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            // Se o clique não foi em um TextBox ou outro controle de edição
+            if (e.ButtonState == MouseButtonState.Pressed && e.OriginalSource is FrameworkElement fe && 
+                !(fe is TextBox) && !(fe.Parent is TextBox))
+            {
+                DragMove();
+            }
+        }
+
+        private void MinimizeButton_Click(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState.Minimized;
+        }
+
+        private void MaximizeButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (Width == SystemParameters.WorkArea.Width && Height == SystemParameters.WorkArea.Height)
+            {
+                // Restaurar para o tamanho normal (antes de maximizar)
+                WindowState = WindowState.Normal;
+                Left = (SystemParameters.PrimaryScreenWidth - 957) / 2;
+                Top = (SystemParameters.PrimaryScreenHeight - 627) / 2;
+                Width = 957;
+                Height = 627;
+                
+                if (MaximizeIcon != null)
+                {
+                    MaximizeIcon.Text = "\uE739";  // Ícone de maximizar
+                }
+            }
+            else
+            {
+                MaximizeWindowWithTaskbar();
+            }
+        }
+
+        private void MainWindow_StateChanged(object sender, EventArgs e)
+        {
+            // Atualizar o ícone com base nas dimensões reais em vez do WindowState
+            if (MaximizeIcon != null)
+            {
+                bool isMaximized = Width == SystemParameters.WorkArea.Width && 
+                                  Height == SystemParameters.WorkArea.Height;
+                MaximizeIcon.Text = isMaximized ? "\uE923" : "\uE739";
+            }
+        }
+
+        private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
             Close();
         }
