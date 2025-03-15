@@ -14,10 +14,22 @@
 
   <ItemGroup>
     <None Remove="Assets\logo.png" />
+    <None Remove="Assets\play.png" />
+    <None Remove="Assets\reset.png" />
+    <None Remove="Assets\pause.png" />
+    <None Remove="Assets\sair.png" />
+    <None Remove="Assets\mais.png" />
+    <None Remove="Assets\menos.png" />
   </ItemGroup>
 
   <ItemGroup>
     <Resource Include="Assets\logo.png" />
+    <Resource Include="Assets\play.png" />
+    <Resource Include="Assets\reset.png" />
+    <Resource Include="Assets\pause.png" />
+    <Resource Include="Assets\sair.png" />
+    <Resource Include="Assets\mais.png" />
+    <Resource Include="Assets\menos.png" />
   </ItemGroup>
 
 </Project>

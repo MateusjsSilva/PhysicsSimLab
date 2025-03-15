@@ -19,7 +19,6 @@ namespace PhysicsSimLab.Views
     /// </summary>
     public partial class MainWindow : Window
     {
-        // Adicionar estas APIs do Windows para maximizar corretamente
         [DllImport("user32.dll")]
         private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
@@ -69,23 +68,19 @@ namespace PhysicsSimLab.Views
 
         private void MainWindow_Loaded(object? sender, RoutedEventArgs e)
         {
-            // Maximizar a janela respeitando a barra de tarefas
             Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() => {
-                // Usando SystemParameters.WorkArea para respeitar a barra de tarefas
                 var workArea = SystemParameters.WorkArea;
                 Left = workArea.Left;
                 Top = workArea.Top;
                 Width = workArea.Width;
                 Height = workArea.Height;
                 
-                // Atualizar ícone para mostrar o estado "restaurar"
                 if (MaximizeIcon != null)
                 {
-                    MaximizeIcon.Text = "\uE923";  // Ícone de restaurar
+                    MaximizeIcon.Text = "\uE923";
                 }
                 
-                // Sinalizar para a UI que estamos "maximizados" em termos de comportamento
-                WindowState = WindowState.Normal; // Usamos Normal, mas com as dimensões da área de trabalho
+                WindowState = WindowState.Normal;
             }));
 
             SetupSimulationCanvas();
@@ -217,11 +212,11 @@ namespace PhysicsSimLab.Views
             
             simulationService.Reset();
             
-            ApplyUIParametersToBall();
+            ApplyUIParametersToSelectedBall();
             CenterCamera();
         }
         
-        void ApplyUIParametersToBall()
+        private void ApplyUIParametersToSelectedBall()
         {
             if (activeBallIndex < 0 || activeBallIndex >= balls.Count)
                 return;
@@ -229,30 +224,30 @@ namespace PhysicsSimLab.Views
             BallData ball = balls[activeBallIndex];
 
             double mass;
-            if (!TryParseInvariant(MassTextBox.Text, out mass) || mass <= 0)
+            if (!TryParseInvariant(SelectedBallMassTextBox.Text, out mass) || mass <= 0)
                 mass = 1.0;
             ball.Mass = mass;
 
             double vx;
-            if (!TryParseInvariant(VxTextBox.Text, out vx))
+            if (!TryParseInvariant(SelectedBallVxTextBox.Text, out vx))
                 vx = 6;
             ball.Vx = vx;
             ball.InitialVx = vx;
 
             double vy;
-            if (!TryParseInvariant(VyTextBox.Text, out vy))
+            if (!TryParseInvariant(SelectedBallVyTextBox.Text, out vy))
                 vy = 15;
             ball.Vy = vy;
             ball.InitialVy = vy;
 
             double restitution;
-            if (!TryParseInvariant(RestituicaoTextBox.Text, out restitution) ||
+            if (!TryParseInvariant(SelectedBallRestitutionTextBox.Text, out restitution) ||
                 restitution < 0 || restitution > 1)
                 restitution = 0.7;
             ball.Restitution = restitution;
 
             double size;
-            if (!TryParseInvariant(BallSizeTextBox.Text, out size) || size <= 0)
+            if (!TryParseInvariant(SelectedBallSizeTextBox.Text, out size) || size <= 0)
                 size = 30;
             ball.Size = size;
 
@@ -611,7 +606,7 @@ namespace PhysicsSimLab.Views
             };
             
             SimulationCanvas.Children.Add(ballVisual);
-            Canvas.SetZIndex(ballVisual, 100);
+            Canvas.SetZIndex(ballVisual, 100); // Default Z-index for balls
             
             Polyline trajectory = new Polyline
             {
@@ -621,7 +616,7 @@ namespace PhysicsSimLab.Views
             };
             
             SimulationCanvas.Children.Add(trajectory);
-            Canvas.SetZIndex(trajectory, 50);
+            Canvas.SetZIndex(trajectory, 50); // Trajectory should be below balls
             
             newBall.Visual = ballVisual;
             newBall.Trajectory = trajectory;
@@ -675,16 +670,25 @@ namespace PhysicsSimLab.Views
                 if (balls[i].Visual != null)
                 {
                     balls[i].Visual.StrokeThickness = (i == activeBallIndex) ? 3 : 1;
+                    
+                    if (i == activeBallIndex)
+                    {
+                        Canvas.SetZIndex(balls[i].Visual, 200);
+                    }
+                    else
+                    {
+                        Canvas.SetZIndex(balls[i].Visual, 100);
+                    }
                 }
             }
             
             if (balls[activeBallIndex].Visual != null)
             {
-                MassTextBox.Text = balls[activeBallIndex].Mass.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
-                VxTextBox.Text = balls[activeBallIndex].Vx.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
-                VyTextBox.Text = balls[activeBallIndex].Vy.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
-                RestituicaoTextBox.Text = balls[activeBallIndex].Restitution.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
-                BallSizeTextBox.Text = balls[activeBallIndex].Size.ToString("F0", System.Globalization.CultureInfo.InvariantCulture);
+                SelectedBallMassTextBox.Text = balls[activeBallIndex].Mass.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+                SelectedBallVxTextBox.Text = balls[activeBallIndex].Vx.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+                SelectedBallVyTextBox.Text = balls[activeBallIndex].Vy.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+                SelectedBallRestitutionTextBox.Text = balls[activeBallIndex].Restitution.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+                SelectedBallSizeTextBox.Text = balls[activeBallIndex].Size.ToString("F0", System.Globalization.CultureInfo.InvariantCulture);
                 
                 UpdateInfoPanel(balls[activeBallIndex], simulationService?.CurrentTime ?? 0);
                 UpdateInfoPanelPosition(balls[activeBallIndex]);
@@ -763,7 +767,6 @@ namespace PhysicsSimLab.Views
 
         private void MainWindow_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            // Se o clique não foi em um TextBox ou outro controle de edição
             if (e.ButtonState == MouseButtonState.Pressed && e.OriginalSource is FrameworkElement fe && 
                 !(fe is TextBox) && !(fe.Parent is TextBox))
             {
@@ -780,7 +783,6 @@ namespace PhysicsSimLab.Views
         {
             if (Width == SystemParameters.WorkArea.Width && Height == SystemParameters.WorkArea.Height)
             {
-                // Restaurar para o tamanho normal (antes de maximizar)
                 WindowState = WindowState.Normal;
                 Left = (SystemParameters.PrimaryScreenWidth - 957) / 2;
                 Top = (SystemParameters.PrimaryScreenHeight - 627) / 2;
@@ -789,12 +791,11 @@ namespace PhysicsSimLab.Views
                 
                 if (MaximizeIcon != null)
                 {
-                    MaximizeIcon.Text = "\uE739";  // Ícone de maximizar
+                    MaximizeIcon.Text = "\uE739";
                 }
             }
             else
             {
-                // Maximizar respeitando a barra de tarefas
                 var workArea = SystemParameters.WorkArea;
                 Left = workArea.Left;
                 Top = workArea.Top;
@@ -803,14 +804,13 @@ namespace PhysicsSimLab.Views
                 
                 if (MaximizeIcon != null)
                 {
-                    MaximizeIcon.Text = "\uE923";  // Ícone de restaurar
+                    MaximizeIcon.Text = "\uE923";
                 }
             }
         }
 
         private void MainWindow_StateChanged(object sender, EventArgs e)
         {
-            // Atualizar o ícone com base nas dimensões reais em vez do WindowState
             if (MaximizeIcon != null)
             {
                 bool isMaximized = Width == SystemParameters.WorkArea.Width && 
@@ -822,6 +822,38 @@ namespace PhysicsSimLab.Views
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
             Close();
+        }
+
+        private void SelectedBallParameter_Changed(object sender, TextChangedEventArgs e)
+        {
+            if (!IsLoaded) return;
+
+            if (simulationService != null && simulationService.IsRunning)
+            {
+                return;
+            }
+
+            TextBox? textBox = sender as TextBox;
+            if (textBox != null)
+            {
+                string text = textBox.Text;
+
+                double tempValue;
+                if (!string.IsNullOrEmpty(text) && !TryParseInvariant(text, out tempValue))
+                {
+                    textBox.Background = new SolidColorBrush(Colors.LightPink);
+                    return;
+                }
+                else
+                {
+                    textBox.Background = new SolidColorBrush(Colors.White);
+                }
+            }
+
+            if (activeBallIndex >= 0 && activeBallIndex < balls.Count)
+            {
+                ApplyUIParametersToSelectedBall();
+            }
         }
     }
 }

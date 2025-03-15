@@ -96,6 +96,52 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+
+        <Style x:Key="FormulaExpanderStyle" TargetType="Expander">
+            <Setter Property="BorderBrush" Value="#67009FFF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="5"/>
+            <Setter Property="Margin" Value="0,5,0,0"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="IsExpanded" Value="False"/>
+            <Setter Property="Background" Value="#F0F8FF"/>
+        </Style>
+
+        <!-- Rounded Button Style -->
+        <Style x:Key="RoundedButtonStyle" TargetType="Button">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="5"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+        <!-- Circle Button Style for Add/Remove -->
+        <Style x:Key="CircleButtonStyle" TargetType="Button">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="3"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Width="30" 
+                                Height="30">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="30" />
+        </Style>
     </Window.Resources>
 
     <DockPanel>
@@ -113,23 +159,14 @@
 
                 <Menu Grid.Column="1" Background="#181F32" Foreground="White" Margin="0,0,633,0" Width="140" HorizontalAlignment="Left">
                     <MenuItem Header="_Arquivo" Style="{StaticResource MenuItemStyle}" BorderBrush="{x:Null}">
-                        <MenuItem Header="_Sair" Click="MenuItemSair_Click" Style="{StaticResource SubMenuItemStyle}">
-                        </MenuItem>
+                        <MenuItem Header="_Sair" Click="MenuItemSair_Click" Style="{StaticResource SubMenuItemStyle}"/>
                     </MenuItem>
                     <MenuItem Header="_Simulação" Style="{StaticResource MenuItemStyle}">
-                        <MenuItem Header="_Iniciar/Pausar" Click="MenuItemSimular_Click" Style="{StaticResource SubMenuItemStyle}">
-                     
-                        </MenuItem>
-                        <MenuItem Header="_Resetar" Click="MenuItemResetar_Click" Style="{StaticResource SubMenuItemStyle}">
-                      
-                        </MenuItem>
+                        <MenuItem Header="_Iniciar/Pausar" Click="MenuItemSimular_Click" Style="{StaticResource SubMenuItemStyle}"/>
+                        <MenuItem Header="_Resetar" Click="MenuItemResetar_Click" Style="{StaticResource SubMenuItemStyle}"/>
                         <Separator/>
-                        <MenuItem Header="_Adicionar Bola" Click="MenuItemAdicionarBola_Click" Style="{StaticResource SubMenuItemStyle}">
-                        
-                        </MenuItem>
-                        <MenuItem Header="_Remover Bola" Click="MenuItemRemoverBola_Click" Style="{StaticResource SubMenuItemStyle}">
-                         
-                        </MenuItem>
+                        <MenuItem Header="_Adicionar Bola" Click="MenuItemAdicionarBola_Click" Style="{StaticResource SubMenuItemStyle}"/>
+                        <MenuItem Header="_Remover Bola" Click="MenuItemRemoverBola_Click" Style="{StaticResource SubMenuItemStyle}"/>
                     </MenuItem>
                 </Menu>
 
@@ -148,36 +185,13 @@
         </Border>
 
         <Grid>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="145*"/>
-                <ColumnDefinition Width="29*"/>
-                <ColumnDefinition Width="509*"/>
-                <ColumnDefinition Width="274"/>
-                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="280"/>
             </Grid.ColumnDefinitions>
 
-            <StackPanel Grid.Row="0" Grid.ColumnSpan="4" Orientation="Horizontal" HorizontalAlignment="Left" Margin="10,10,0,5" Width="942">
-                <Button x:Name="StartButton" Content="Iniciar" Width="70" Click="StartButton_Click" Height="20" Margin="0,0,10,0"/>
-                <Button x:Name="ResetButton" Content="Reiniciar" Width="70" Click="ResetButton_Click" Height="20"/>
-                <Label Content="Velocidade X:" VerticalAlignment="Center" Margin="30,0,0,0"/>
-                <TextBox x:Name="VxTextBox" Text="6" Width="40" Margin="5" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                <Label Content="Velocidade Y:" VerticalAlignment="Center"/>
-                <TextBox x:Name="VyTextBox" Text="15" Width="40" Margin="5" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-                <Label Content="Coef. Restituição:" VerticalAlignment="Center"/>
-                <TextBox x:Name="RestituicaoTextBox" Text="0.7" Width="40" Margin="5"/>
-                <Separator Width="20" Margin="5"/>
-                <ComboBox x:Name="BallSelector" Width="100" SelectionChanged="BallSelector_SelectionChanged" Margin="5"/>
-                <Button x:Name="AddBallButton" Content="+" Width="30" Click="AddBallButton_Click" Margin="5" ToolTip="Adicionar Nova Bola"/>
-                <Button x:Name="RemoveBallButton" Content="-" Width="30" Click="RemoveBallButton_Click" Margin="5" ToolTip="Remover Bola Atual"/>
-            </StackPanel>
-
-            <Border Grid.Row="1" Grid.Column="0" BorderThickness="1,1,1,1" Margin="10,5,10,10" Background="#EAEAEA" BorderBrush="Black" Grid.ColumnSpan="3">
+            <!-- Right side with canvas -->
+            <Border Grid.Column="0" BorderThickness="1,1,1,1" Margin="5" Background="#EAEAEA">
                 <ScrollViewer x:Name="SimulationScroller" 
                               HorizontalScrollBarVisibility="Auto" 
                               VerticalScrollBarVisibility="Auto"
@@ -189,7 +203,7 @@
                            MouseMove="SimulationCanvas_MouseMove"
                            MouseLeftButtonUp="SimulationCanvas_MouseLeftButtonUp">
 
-                        <Rectangle x:Name="GroundLine" Fill="Green" Height="5" Width="{Binding ElementName=SimulationCanvas, Path=Width}" 
+                        <Rectangle x:Name="GroundLine" Fill="Green" Width="{Binding ElementName=SimulationCanvas, Path=Width}" 
                                  Canvas.Left="0" Canvas.ZIndex="1"/>
 
                         <Border x:Name="InfoPanel" Background="White" BorderBrush="Black" BorderThickness="1" 
@@ -202,37 +216,45 @@
                 </ScrollViewer>
             </Border>
 
-            <Border Grid.Row="1" Grid.Column="3" BorderBrush="DarkBlue" BorderThickness="1" Margin="5,5,5,10" Background="#F0F8FF">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,0,0,9">
+            <!-- Left side with all controls - now with left border -->
+            <Border Grid.Column="1" BorderThickness="1,0,0,0" BorderBrush="#FF181F32" Background="#FFF2F5F9">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="10">
-                        <TextBlock Text="Fórmulas Físicas" FontWeight="Bold" FontSize="16" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                        <!-- Play and Reset buttons with rounded corners -->
+                        <Button x:Name="StartButton" Content="Iniciar" Click="StartButton_Click" Height="29" Margin="0,10,0,5" 
+                                HorizontalAlignment="Left" Width="259" Background="#FF16C118" BorderBrush="#FFFDFDFD" 
+                                Foreground="White" FontSize="14" Style="{StaticResource RoundedButtonStyle}"/>
+                        <Button x:Name="ResetButton" Content="Reiniciar" Width="260" Click="ResetButton_Click" Height="29" 
+                                Margin="0,0,0,10" HorizontalAlignment="Left" Background="#FFD90D1E" BorderBrush="#FFFDFDFD" 
+                                Foreground="White" FontSize="14" Style="{StaticResource RoundedButtonStyle}"/>
+                        
+                        <!-- Ball selector and +/- buttons with icon only -->
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <ComboBox x:Name="BallSelector" Grid.Column="0" SelectionChanged="BallSelector_SelectionChanged" Margin="0,0,5,0" BorderBrush="#FF181F32">
+                                <ComboBox.Background>
+                                    <LinearGradientBrush EndPoint="0,1">
+                                        <GradientStop Color="#FFF0F0F0"/>
+                                        <GradientStop Color="#FFFDFDFD" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </ComboBox.Background>
+                            </ComboBox>
+                            <Button x:Name="AddBallButton" Grid.Column="1" Click="AddBallButton_Click" ToolTip="Adicionar Nova Bola" Margin="0,0,5,0" 
+                                    Style="{StaticResource CircleButtonStyle}" Background="#FF3FB618" BorderBrush="{x:Null}">
+                                <Image Source="/Assets/mais.png" Width="16" Height="16"/>
+                            </Button>
+                            <Button x:Name="RemoveBallButton" Grid.Column="2" Click="RemoveBallButton_Click" ToolTip="Remover Bola Atual" 
+                                    Style="{StaticResource CircleButtonStyle}" Background="#FFD90D1E" BorderBrush="{x:Null}">
+                                <Image Source="/Assets/menos.png" Width="16" Height="16"/>
+                            </Button>
+                        </Grid>
 
-                        <GroupBox Header="Movimento de Projétil" BorderBrush="#67009FFF" FontSize="13">
-                            <StackPanel>
-                                <TextBlock Text="x(t) = x₀ + v₀ₓ·t" Margin="0,5"/>
-                                <TextBlock Text="y(t) = y₀ + v₀ᵧ·t - ½·g·t²" Margin="0,5"/>
-                                <TextBlock Text="vᵧ(t) = v₀ᵧ - g·t" Margin="0,5"/>
-                            </StackPanel>
-                        </GroupBox>
-
-                        <GroupBox Header="Colisão" Margin="0,10,0,0" BorderBrush="#67009FFF" FontSize="13">
-                            <StackPanel>
-                                <TextBlock Text="vᵧ' = -vᵧ · CR" Margin="0,5"/>
-                                <TextBlock Text="vₓ' = vₓ · FA" Margin="0,5"/>
-                                <TextBlock Text="onde CR = coeficiente de restituição" Margin="0,5" FontSize="11"/>
-                                <TextBlock Text="e FA = fator de atrito horizontal" Margin="0,5" FontSize="11"/>
-                            </StackPanel>
-                        </GroupBox>
-
-                        <GroupBox Header="Energia" Margin="0,10,0,0" BorderBrush="#67009FFF" FontSize="13">
-                            <StackPanel>
-                                <TextBlock Text="E₍ₖ₎ = ½·m·v²" Margin="0,5"/>
-                                <TextBlock Text="E₍ₚ₎ = m·g·h" Margin="0,5"/>
-                                <TextBlock Text="E₍ₜₒₜₐₗ₎ = E₍ₖ₎ + E₍ₚ₎" Margin="0,5"/>
-                            </StackPanel>
-                        </GroupBox>
-
-                        <GroupBox Header="Parâmetros Adicionais" Margin="0,10,0,0" BorderBrush="#67009FFF" FontSize="13">
+                        <!-- Parameters -->
+                        <GroupBox Header="Parâmetros" Margin="0,5,0,10" BorderBrush="#FF181F32" FontSize="13" Background="AliceBlue">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
@@ -244,24 +266,64 @@
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
                                 <Label Content="Massa (kg):" Grid.Row="0" Grid.Column="0"/>
-                                <TextBox x:Name="MassTextBox" Grid.Row="0" Grid.Column="1" Text="1.0" Margin="5" TextChanged="PhysicsParameter_Changed" FontSize="12"/>
+                                <TextBox x:Name="SelectedBallMassTextBox" Grid.Row="0" Grid.Column="1" Text="1.0" Margin="5" TextChanged="SelectedBallParameter_Changed" FontSize="12"/>
 
-                                <Label Content="Gravidade (m/s²):" Grid.Row="1" Grid.Column="0"/>
-                                <TextBox x:Name="GravityTextBox" Grid.Row="1" Grid.Column="1" Text="9.81" Margin="5" TextChanged="PhysicsParameter_Changed" FontSize="12"/>
+                                <Label Content="Velocidade X (m/s):" Grid.Row="1" Grid.Column="0"/>
+                                <TextBox x:Name="SelectedBallVxTextBox" Grid.Row="1" Grid.Column="1" Text="6" Margin="5" TextChanged="SelectedBallParameter_Changed" FontSize="12"/>
 
-                                <Label Content="Resistência do Ar:" Grid.Row="2" Grid.Column="0"/>
-                                <TextBox x:Name="AirResistanceTextBox" Grid.Row="2" Grid.Column="1" Text="0.01" Margin="5" TextChanged="PhysicsParameter_Changed" FontSize="12"/>
+                                <Label Content="Velocidade Y (m/s):" Grid.Row="2" Grid.Column="0"/>
+                                <TextBox x:Name="SelectedBallVyTextBox" Grid.Row="2" Grid.Column="1" Text="15" Margin="5" TextChanged="SelectedBallParameter_Changed" FontSize="12"/>
 
-                                <Label Content="Tamanho da Bola:" Grid.Row="3" Grid.Column="0"/>
-                                <TextBox x:Name="BallSizeTextBox" Grid.Row="3" Grid.Column="1" Text="30" Margin="5" TextChanged="PhysicsParameter_Changed" FontSize="12"/>
+                                <Label Content="Coef. Restituição:" Grid.Row="3" Grid.Column="0"/>
+                                <TextBox x:Name="SelectedBallRestitutionTextBox" Grid.Row="3" Grid.Column="1" Text="0.7" Margin="5" TextChanged="SelectedBallParameter_Changed" FontSize="12"/>
 
-                                <Label Content="Atrito Horizontal:" Grid.Row="4" Grid.Column="0"/>
-                                <TextBox x:Name="FrictionTextBox" Grid.Row="4" Grid.Column="1" Text="0.95" Margin="5" TextChanged="PhysicsParameter_Changed" FontSize="12"/>
+                                <Label Content="Tamanho da Bola (px):" Grid.Row="4" Grid.Column="0"/>
+                                <TextBox x:Name="SelectedBallSizeTextBox" Grid.Row="4" Grid.Column="1" Text="30" Margin="5" TextChanged="SelectedBallParameter_Changed" FontSize="12"/>
+
+                                <Label Content="Gravidade (m/s²):" Grid.Row="5" Grid.Column="0"/>
+                                <TextBox x:Name="GravityTextBox" Grid.Row="5" Grid.Column="1" Text="9.81" Margin="5" TextChanged="PhysicsParameter_Changed" FontSize="12"/>
+
+                                <Label Content="Resistência do Ar:" Grid.Row="6" Grid.Column="0"/>
+                                <TextBox x:Name="AirResistanceTextBox" Grid.Row="6" Grid.Column="1" Text="0.01" Margin="5" TextChanged="PhysicsParameter_Changed" FontSize="12"/>
+
+                                <Label Content="Atrito Horizontal:" Grid.Row="7" Grid.Column="0"/>
+                                <TextBox x:Name="FrictionTextBox" Grid.Row="7" Grid.Column="1" Text="0.95" Margin="5" TextChanged="PhysicsParameter_Changed" FontSize="12"/>
                             </Grid>
                         </GroupBox>
+
+                        <!-- Formulas -->
+                        <TextBlock Text="Fórmulas Físicas" FontSize="16" HorizontalAlignment="Center" Margin="0,5,0,10"/>
+
+                        <Expander Header="Movimento de Projétil" Style="{StaticResource FormulaExpanderStyle}" Background="AliceBlue" BorderBrush="#FF181F32" Margin="0,0,0,5">
+                            <StackPanel>
+                                <TextBlock Text="x(t) = x₀ + v₀ₓ·t" Margin="0,5" FontSize="14"/>
+                                <TextBlock Text="y(t) = y₀ + v₀ᵧ·t - ½·g·t²" Margin="0,5" FontSize="14"/>
+                                <TextBlock Text="vᵧ(t) = v₀ᵧ - g·t" Margin="0,5" FontSize="14"/>
+                            </StackPanel>
+                        </Expander>
+
+                        <Expander Header="Colisão" Style="{StaticResource FormulaExpanderStyle}" BorderBrush="#FF181F32" Margin="0,0,0,5" FontSize="14">
+                            <StackPanel>
+                                <TextBlock Text="vᵧ' = -vᵧ · CR" Margin="0,5"/>
+                                <TextBlock Text="vₓ' = vₓ · FA" Margin="0,5"/>
+                                <TextBlock Text="onde CR = coeficiente de restituição" Margin="0,5" FontSize="11"/>
+                                <TextBlock Text="e FA = fator de atrito horizontal" Margin="0,5" FontSize="11"/>
+                            </StackPanel>
+                        </Expander>
+
+                        <Expander Header="Energia" Style="{StaticResource FormulaExpanderStyle}" BorderBrush="#FF181F32" FontSize="14">
+                            <StackPanel>
+                                <TextBlock Text="E₍ₖ₎ = ½·m·v²" Margin="0,5"/>
+                                <TextBlock Text="E₍ₚ₎ = m·g·h" Margin="0,5"/>
+                                <TextBlock Text="E₍ₜₒₜₐₗ₎ = E₍ₖ₎ + E₍ₚ₎" Margin="0,5"/>
+                            </StackPanel>
+                        </Expander>
                     </StackPanel>
                 </ScrollViewer>
             </Border>
