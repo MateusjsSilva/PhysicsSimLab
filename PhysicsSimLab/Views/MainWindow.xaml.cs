@@ -11,7 +11,6 @@ using PhysicsSimLab.Models;
 using PhysicsSimLab.Services;
 using static PhysicsSimLab.Helpers.MathHelper;
 using System.Runtime.InteropServices;
-using System.Windows.Interop;
 
 namespace PhysicsSimLab.Views
 {
@@ -20,7 +19,7 @@ namespace PhysicsSimLab.Views
     /// </summary>
     public partial class MainWindow : Window
     {
-        // Adicionar estas APIs do Windows para maximizar corretamente e capturar mensagens do sistema
+        // Adicionar estas APIs do Windows para maximizar corretamente
         [DllImport("user32.dll")]
         private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
@@ -28,33 +27,6 @@ namespace PhysicsSimLab.Views
         private static extern IntPtr GetForegroundWindow();
 
         private const int SW_MAXIMIZE = 3;
-        private const int WM_SYSCOMMAND = 0x0112;
-        private const int SC_MAXIMIZE = 0xF030;
-        private const int WM_GETMINMAXINFO = 0x0024;
-
-        [StructLayout(LayoutKind.Sequential)]
-        public struct MINMAXINFO
-        {
-            public POINT ptReserved;
-            public POINT ptMaxSize;
-            public POINT ptMaxPosition;
-            public POINT ptMinTrackSize;
-            public POINT ptMaxTrackSize;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        public struct POINT
-        {
-            public int x;
-            public int y;
-            public POINT(int x, int y)
-            {
-                this.x = x;
-                this.y = y;
-            }
-        }
-
-        private HwndSource _hwndSource;
 
         private List<BallData> balls = new List<BallData>();
         private int activeBallIndex = -1;
@@ -93,68 +65,27 @@ namespace PhysicsSimLab.Views
             SizeChanged += MainWindow_SizeChanged;
             MouseLeftButtonDown += MainWindow_MouseLeftButtonDown;
             StateChanged += MainWindow_StateChanged;
-            SourceInitialized += MainWindow_SourceInitialized;
-        }
-
-        private void MainWindow_SourceInitialized(object? sender, EventArgs e)
-        {
-            _hwndSource = PresentationSource.FromVisual(this) as HwndSource;
-            if (_hwndSource != null)
-            {
-                _hwndSource.AddHook(WndProc);
-            }
-        }
-
-        private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
-        {
-            if (msg == WM_SYSCOMMAND && (wParam.ToInt32() & 0xFFF0) == SC_MAXIMIZE)
-            {
-                // Impedir maximização padrão e aplicar nossa própria
-                MaximizeWindowWithTaskbar();
-                handled = true;
-            }
-            else if (msg == WM_GETMINMAXINFO)
-            {
-                // Definir tamanhos máximos para impedir que a janela cubra a barra de tarefas
-                var workArea = SystemParameters.WorkArea;
-                
-                MINMAXINFO mmi = Marshal.PtrToStructure<MINMAXINFO>(lParam);
-                
-                mmi.ptMaxPosition.x = (int)workArea.Left;
-                mmi.ptMaxPosition.y = (int)workArea.Top;
-                mmi.ptMaxSize.x = (int)workArea.Width;
-                mmi.ptMaxSize.y = (int)workArea.Height;
-                
-                Marshal.StructureToPtr(mmi, lParam, true);
-                handled = true;
-            }
-            
-            return IntPtr.Zero;
-        }
-
-        private void MaximizeWindowWithTaskbar()
-        {
-            var workArea = SystemParameters.WorkArea;
-            Left = workArea.Left;
-            Top = workArea.Top;
-            Width = workArea.Width;
-            Height = workArea.Height;
-            
-            // Atualizar ícone para mostrar o estado "restaurar"
-            if (MaximizeIcon != null)
-            {
-                MaximizeIcon.Text = "\uE923";  // Ícone de restaurar
-            }
         }
 
         private void MainWindow_Loaded(object? sender, RoutedEventArgs e)
         {
             // Maximizar a janela respeitando a barra de tarefas
             Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() => {
-                MaximizeWindowWithTaskbar();
+                // Usando SystemParameters.WorkArea para respeitar a barra de tarefas
+                var workArea = SystemParameters.WorkArea;
+                Left = workArea.Left;
+                Top = workArea.Top;
+                Width = workArea.Width;
+                Height = workArea.Height;
                 
-                // Sinalizar internamente que estamos "maximizados"
-                WindowState = WindowState.Normal; // Mantemos Normal porque estamos gerenciando manualmente o tamanho
+                // Atualizar ícone para mostrar o estado "restaurar"
+                if (MaximizeIcon != null)
+                {
+                    MaximizeIcon.Text = "\uE923";  // Ícone de restaurar
+                }
+                
+                // Sinalizar para a UI que estamos "maximizados" em termos de comportamento
+                WindowState = WindowState.Normal; // Usamos Normal, mas com as dimensões da área de trabalho
             }));
 
             SetupSimulationCanvas();
@@ -863,7 +794,17 @@ namespace PhysicsSimLab.Views
             }
             else
             {
-                MaximizeWindowWithTaskbar();
+                // Maximizar respeitando a barra de tarefas
+                var workArea = SystemParameters.WorkArea;
+                Left = workArea.Left;
+                Top = workArea.Top;
+                Width = workArea.Width;
+                Height = workArea.Height;
+                
+                if (MaximizeIcon != null)
+                {
+                    MaximizeIcon.Text = "\uE923";  // Ícone de restaurar
+                }
             }
         }
 

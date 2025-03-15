@@ -42,7 +42,7 @@
         <Style x:Key="MinimizeButtonStyle" TargetType="Button" BasedOn="{StaticResource WindowButtonStyle}">
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#3FFFFFFF"/>
+                    <Setter Property="Background" Value="#1E2640"/>
                 </Trigger>
                 <Trigger Property="IsPressed" Value="True">
                     <Setter Property="Background" Value="#7FFFFFFF"/>
@@ -54,7 +54,7 @@
         <Style x:Key="MaximizeButtonStyle" TargetType="Button" BasedOn="{StaticResource WindowButtonStyle}">
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#BFBFBF"/>
+                    <Setter Property="Background" Value="#3FFFFFFF"/>
                 </Trigger>
                 <Trigger Property="IsPressed" Value="True">
                     <Setter Property="Background" Value="#7FFFFFFF"/>
@@ -76,7 +76,7 @@
     </Window.Resources>
 
     <DockPanel>
-        <Border Background="#FF1E2640" DockPanel.Dock="Top" Height="40">
+        <Border x:Name="TitleBar" Background="#FF141B2A" DockPanel.Dock="Top" Height="40">
             <Grid Margin="10,0,0,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -90,13 +90,13 @@
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" Grid.Column="2" HorizontalAlignment="Right">
-                    <Button Style="{StaticResource MinimizeButtonStyle}" Click="MinimizeButton_Click" Height="39">
+                    <Button Style="{StaticResource MinimizeButtonStyle}" Click="MinimizeButton_Click" Height="40">
                         <TextBlock Text="&#xE949;" FontSize="10"/>
                     </Button>
-                    <Button Style="{StaticResource MaximizeButtonStyle}" Click="MaximizeButton_Click" Height="39">
+                    <Button Style="{StaticResource MaximizeButtonStyle}" Click="MaximizeButton_Click" Height="40">
                         <TextBlock x:Name="MaximizeIcon" Text="&#xE739;" FontSize="10"/>
                     </Button>
-                    <Button Style="{StaticResource CloseButtonStyle}" Click="CloseButton_Click" Height="39">
+                    <Button Style="{StaticResource CloseButtonStyle}" Click="CloseButton_Click" Height="40">
                         <TextBlock Text="&#xE106;" FontSize="10"/>
                     </Button>
                 </StackPanel>
