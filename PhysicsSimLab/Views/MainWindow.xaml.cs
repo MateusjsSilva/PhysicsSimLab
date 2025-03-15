@@ -128,6 +128,11 @@ namespace PhysicsSimLab.Views
             {
                 visualizationService.UpdateGroundRect(SimulationCanvas.Width);
             }
+
+            foreach (var ball in balls)
+            {
+                UpdateTrajectoryVisual(ball);
+            }
         }
         
         private void SetupSimulationCanvas()
@@ -589,7 +594,7 @@ namespace PhysicsSimLab.Views
                 Mass = 1.0,
                 Restitution = 0.7,
                 Size = 30,
-                Color = ballColors[balls.Count % ballColors.Count],
+                Color = GetUniqueColor(),
                 InitialX = 2,
                 InitialY = 10,
                 InitialVx = 6,
@@ -606,7 +611,7 @@ namespace PhysicsSimLab.Views
             };
             
             SimulationCanvas.Children.Add(ballVisual);
-            Canvas.SetZIndex(ballVisual, 100); // Default Z-index for balls
+            Canvas.SetZIndex(ballVisual, 100); 
             
             Polyline trajectory = new Polyline
             {
@@ -616,7 +621,7 @@ namespace PhysicsSimLab.Views
             };
             
             SimulationCanvas.Children.Add(trajectory);
-            Canvas.SetZIndex(trajectory, 50); // Trajectory should be below balls
+            Canvas.SetZIndex(trajectory, 50);
             
             newBall.Visual = ballVisual;
             newBall.Trajectory = trajectory;
@@ -631,9 +636,27 @@ namespace PhysicsSimLab.Views
             
             UpdateBallSelectionUI();
         }
-        
+
+        private SolidColorBrush GetUniqueColor()
+        {
+            foreach (var color in ballColors)
+            {
+                if (!balls.Exists(ball => ball.Color == color))
+                {
+                    return color;
+                }
+            }
+            return new SolidColorBrush(Colors.Black);
+        }
+
         private void RemoveActiveBall()
         {
+            if (balls.Count <= 1)
+            {
+                MessageBox.Show("Não é possível remover a última bola.");
+                return;
+            }
+
             if (activeBallIndex < 0 || activeBallIndex >= balls.Count)
                 return;
                 
@@ -709,7 +732,7 @@ namespace PhysicsSimLab.Views
                 BallSelector.SelectedIndex = activeBallIndex;
             }
             
-            RemoveBallButton.IsEnabled = balls.Count > 0;
+            RemoveBallButton.IsEnabled = balls.Count > 1;
             AddBallButton.IsEnabled = balls.Count < MAX_BALLS;
         }
 

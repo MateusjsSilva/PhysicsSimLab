@@ -122,7 +122,7 @@
                 </Setter.Value>
             </Setter>
         </Style>
-        
+
         <!-- Circle Button Style for Add/Remove -->
         <Style x:Key="CircleButtonStyle" TargetType="Button">
             <Setter Property="Template">
@@ -141,6 +141,15 @@
             </Setter>
             <Setter Property="Width" Value="30" />
             <Setter Property="Height" Value="30" />
+        </Style>
+
+        <!-- Style for ComboBox (BallSelector) -->
+        <Style x:Key="BallSelectorStyle" TargetType="ComboBox">
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#FF181F32"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="5,3"/>
+            <Setter Property="Height" Value="30"/>
         </Style>
     </Window.Resources>
 
@@ -190,7 +199,7 @@
                 <ColumnDefinition Width="280"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Right side with canvas -->
+            <!-- Right side with canvas - fixed to fill entire area -->
             <Border Grid.Column="0" BorderThickness="1,1,1,1" Margin="5" Background="#EAEAEA">
                 <ScrollViewer x:Name="SimulationScroller" 
                               HorizontalScrollBarVisibility="Auto" 
@@ -201,9 +210,12 @@
                     <Canvas x:Name="SimulationCanvas" Background="White"
                            MouseLeftButtonDown="SimulationCanvas_MouseLeftButtonDown" 
                            MouseMove="SimulationCanvas_MouseMove"
-                           MouseLeftButtonUp="SimulationCanvas_MouseLeftButtonUp">
+                           MouseLeftButtonUp="SimulationCanvas_MouseLeftButtonUp"
+                           Width="{Binding ActualWidth, ElementName=SimulationScroller}"
+                           Height="{Binding ActualHeight, ElementName=SimulationScroller}">
 
-                        <Rectangle x:Name="GroundLine" Fill="Green" Width="{Binding ElementName=SimulationCanvas, Path=Width}" 
+                        <Rectangle x:Name="GroundLine" Fill="Green" Height="5" 
+                                 Width="{Binding ActualWidth, ElementName=SimulationCanvas}"
                                  Canvas.Left="0" Canvas.ZIndex="1"/>
 
                         <Border x:Name="InfoPanel" Background="White" BorderBrush="Black" BorderThickness="1" 
@@ -227,7 +239,7 @@
                         <Button x:Name="ResetButton" Content="Reiniciar" Width="260" Click="ResetButton_Click" Height="29" 
                                 Margin="0,0,0,10" HorizontalAlignment="Left" Background="#FFD90D1E" BorderBrush="#FFFDFDFD" 
                                 Foreground="White" FontSize="14" Style="{StaticResource RoundedButtonStyle}"/>
-                        
+
                         <!-- Ball selector and +/- buttons with icon only -->
                         <Grid Margin="0,0,0,10">
                             <Grid.ColumnDefinitions>
@@ -235,14 +247,7 @@
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <ComboBox x:Name="BallSelector" Grid.Column="0" SelectionChanged="BallSelector_SelectionChanged" Margin="0,0,5,0" BorderBrush="#FF181F32">
-                                <ComboBox.Background>
-                                    <LinearGradientBrush EndPoint="0,1">
-                                        <GradientStop Color="#FFF0F0F0"/>
-                                        <GradientStop Color="#FFFDFDFD" Offset="1"/>
-                                    </LinearGradientBrush>
-                                </ComboBox.Background>
-                            </ComboBox>
+                            <ComboBox x:Name="BallSelector" Grid.Column="0" SelectionChanged="BallSelector_SelectionChanged" Style="{StaticResource BallSelectorStyle}" Background="{x:Null}" HorizontalAlignment="Left" Height="30" VerticalAlignment="Center" Width="184" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Focusable="False" />
                             <Button x:Name="AddBallButton" Grid.Column="1" Click="AddBallButton_Click" ToolTip="Adicionar Nova Bola" Margin="0,0,5,0" 
                                     Style="{StaticResource CircleButtonStyle}" Background="#FF3FB618" BorderBrush="{x:Null}">
                                 <Image Source="/Assets/mais.png" Width="16" Height="16"/>
