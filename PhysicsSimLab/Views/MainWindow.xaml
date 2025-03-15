@@ -42,7 +42,7 @@
         <Style x:Key="MinimizeButtonStyle" TargetType="Button" BasedOn="{StaticResource WindowButtonStyle}">
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#1E2640"/>
+                    <Setter Property="Background" Value="#3FFFFFFF"/>
                 </Trigger>
                 <Trigger Property="IsPressed" Value="True">
                     <Setter Property="Background" Value="#7FFFFFFF"/>
@@ -73,10 +73,33 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+
+        <Style x:Key="MenuItemStyle" TargetType="MenuItem">
+            <Setter Property="Background" Value="#181F32"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="10,2,10,2"/>
+            <Setter Property="Margin" Value="0,7,0,0"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#3A3F54"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="SubMenuItemStyle" TargetType="MenuItem">
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#3A3F54"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
     </Window.Resources>
 
     <DockPanel>
-        <Border x:Name="TitleBar" Background="#FF141B2A" DockPanel.Dock="Top" Height="40">
+        <Border x:Name="TitleBar" Background="#FF181F32" DockPanel.Dock="Top" Height="35">
             <Grid Margin="10,0,0,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -85,36 +108,44 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Orientation="Horizontal" Grid.Column="0" VerticalAlignment="Center">
-                    <Image Source="/Assets/logo.png" Width="22" Height="21" Margin="0,0,5,0"/>
-                    <TextBlock Text="PhysicsSimLab" VerticalAlignment="Center" Foreground="White" FontSize="13" Margin="5,0,0,0"/>
+                    <Image Source="/Assets/logo.png" Width="20" Height="20" Margin="0,0,5,0"/>
                 </StackPanel>
 
+                <Menu Grid.Column="1" Background="#181F32" Foreground="White" Margin="0,0,633,0" Width="140" HorizontalAlignment="Left">
+                    <MenuItem Header="_Arquivo" Style="{StaticResource MenuItemStyle}" BorderBrush="{x:Null}">
+                        <MenuItem Header="_Sair" Click="MenuItemSair_Click" Style="{StaticResource SubMenuItemStyle}">
+                        </MenuItem>
+                    </MenuItem>
+                    <MenuItem Header="_Simulação" Style="{StaticResource MenuItemStyle}">
+                        <MenuItem Header="_Iniciar/Pausar" Click="MenuItemSimular_Click" Style="{StaticResource SubMenuItemStyle}">
+                     
+                        </MenuItem>
+                        <MenuItem Header="_Resetar" Click="MenuItemResetar_Click" Style="{StaticResource SubMenuItemStyle}">
+                      
+                        </MenuItem>
+                        <Separator/>
+                        <MenuItem Header="_Adicionar Bola" Click="MenuItemAdicionarBola_Click" Style="{StaticResource SubMenuItemStyle}">
+                        
+                        </MenuItem>
+                        <MenuItem Header="_Remover Bola" Click="MenuItemRemoverBola_Click" Style="{StaticResource SubMenuItemStyle}">
+                         
+                        </MenuItem>
+                    </MenuItem>
+                </Menu>
+
                 <StackPanel Orientation="Horizontal" Grid.Column="2" HorizontalAlignment="Right">
-                    <Button Style="{StaticResource MinimizeButtonStyle}" Click="MinimizeButton_Click" Height="40">
+                    <Button Style="{StaticResource MinimizeButtonStyle}" Click="MinimizeButton_Click" Height="35">
                         <TextBlock Text="&#xE949;" FontSize="10"/>
                     </Button>
-                    <Button Style="{StaticResource MaximizeButtonStyle}" Click="MaximizeButton_Click" Height="40">
+                    <Button Style="{StaticResource MaximizeButtonStyle}" Click="MaximizeButton_Click" Height="35">
                         <TextBlock x:Name="MaximizeIcon" Text="&#xE739;" FontSize="10"/>
                     </Button>
-                    <Button Style="{StaticResource CloseButtonStyle}" Click="CloseButton_Click" Height="40">
+                    <Button Style="{StaticResource CloseButtonStyle}" Click="CloseButton_Click" Height="35">
                         <TextBlock Text="&#xE106;" FontSize="10"/>
                     </Button>
                 </StackPanel>
             </Grid>
         </Border>
-
-        <Menu DockPanel.Dock="Top" Background="White">
-            <MenuItem Header="_Arquivo" Margin="10,0,0,0">
-                <MenuItem Header="_Sair" Click="MenuItemSair_Click"/>
-            </MenuItem>
-            <MenuItem Header="_Simulação">
-                <MenuItem Header="_Iniciar/Pausar" Click="MenuItemSimular_Click"/>
-                <MenuItem Header="_Resetar" Click="MenuItemResetar_Click"/>
-                <Separator/>
-                <MenuItem Header="_Adicionar Bola" Click="MenuItemAdicionarBola_Click"/>
-                <MenuItem Header="_Remover Bola" Click="MenuItemRemoverBola_Click"/>
-            </MenuItem>
-        </Menu>
 
         <Grid>
             <Grid.RowDefinitions>
