@@ -88,14 +88,22 @@ namespace PhysicsSimLab.Services
                 
                 double groundRectHeight = simulationCanvas.Height - groundY + 1000;
 
+                // Create a vertical linear gradient that's lighter at top and darker at bottom
+                LinearGradientBrush groundGradient = new LinearGradientBrush
+                {
+                    StartPoint = new Point(0, 0),
+                    EndPoint = new Point(0, 1)
+                };
+                
+                // Add gradient stops - lighter color at top (0.0), darker at bottom (1.0)
+                groundGradient.GradientStops.Add(new GradientStop(Color.FromRgb(210, 180, 140), 0.0)); // Light sandy/tan color
+                groundGradient.GradientStops.Add(new GradientStop(Color.FromRgb(139, 69, 19), 1.0));  // Dark brown
+                
                 groundRectangle = new Rectangle
                 {
                     Width = simulationCanvas.Width,
                     Height = groundRectHeight,
-                    Fill = new LinearGradientBrush(
-                        Color.FromRgb(139, 69, 19),
-                        Color.FromRgb(210, 180, 140),
-                        40),
+                    Fill = groundGradient,
                     Stroke = Brushes.Black,
                     StrokeThickness = 1
                 };
@@ -117,6 +125,19 @@ namespace PhysicsSimLab.Services
                 
                 simulationCanvas.Children.Add(xAxisLine);
                 Canvas.SetZIndex(xAxisLine, 90);
+                
+                yAxisLine = new Line
+                {
+                    X1 = 0,
+                    X2 = 0,
+                    Y1 = groundY,
+                    Y2 = 0, 
+                    Stroke = Brushes.DarkBlue,
+                    StrokeThickness = 3
+                };
+                
+                simulationCanvas.Children.Add(yAxisLine);
+                Canvas.SetZIndex(yAxisLine, 90);
                 
                 for (int i = 5; i <= 100; i += 5)
                 {
@@ -150,15 +171,82 @@ namespace PhysicsSimLab.Services
                     xAxisMarkings.Add(tickLabel);
                 }
                 
+                for (int i = 5; i <= 50; i += 5)
+                {
+                    double yPos = groundY - i * scale;
+                    
+                    if (yPos < 0) break;
+                    
+                    Line tick = new Line
+                    {
+                        X1 = -5,
+                        X2 = 5,
+                        Y1 = yPos,
+                        Y2 = yPos,
+                        Stroke = Brushes.Black,
+                        StrokeThickness = 1
+                    };
+                    
+                    TextBlock tickLabel = new TextBlock
+                    {
+                        Text = i.ToString(),
+                        FontSize = 12,
+                        Foreground = Brushes.Black,
+                        FontWeight = FontWeights.SemiBold,
+                        Background = new SolidColorBrush(Color.FromArgb(200, 255, 255, 255))
+                    };
+                    
+                    Canvas.SetLeft(tickLabel, -20);
+                    Canvas.SetTop(tickLabel, yPos - 8);
+                    
+                    simulationCanvas.Children.Add(tick);
+                    simulationCanvas.Children.Add(tickLabel);
+                    Canvas.SetZIndex(tick, 50);
+                    Canvas.SetZIndex(tickLabel, 95);
+                    
+                    yAxisMarkings.Add(tick);
+                    yAxisMarkings.Add(tickLabel);
+                }
+                
                 TextBlock originLabel = new TextBlock
                 {
-                    Text = "0"
+                    Text = "0",
+                    FontWeight = FontWeights.Bold,
+                    FontSize = 12,
+                    Foreground = Brushes.DarkBlue,
+                    Background = new SolidColorBrush(Color.FromArgb(200, 255, 255, 255))
                 };
-                Canvas.SetLeft(originLabel, -15);
+                Canvas.SetLeft(originLabel, -20);
                 Canvas.SetTop(originLabel, groundY + 8);
                 simulationCanvas.Children.Add(originLabel);
-                Canvas.SetZIndex(originLabel, 50);
+                Canvas.SetZIndex(originLabel, 95);
                 xAxisMarkings.Add(originLabel);
+                
+                TextBlock xAxisLabel = new TextBlock
+                {
+                    Text = "X (m)",
+                    FontWeight = FontWeights.Bold,
+                    FontSize = 14,
+                    Foreground = Brushes.DarkBlue
+                };
+                Canvas.SetLeft(xAxisLabel, simulationCanvas.Width - 50);
+                Canvas.SetTop(xAxisLabel, groundY + 15);
+                simulationCanvas.Children.Add(xAxisLabel);
+                Canvas.SetZIndex(xAxisLabel, 95);
+                xAxisMarkings.Add(xAxisLabel);
+                
+                TextBlock yAxisLabel = new TextBlock
+                {
+                    Text = "Y (m)",
+                    FontWeight = FontWeights.Bold,
+                    FontSize = 14,
+                    Foreground = Brushes.DarkBlue
+                };
+                Canvas.SetLeft(yAxisLabel, 10);
+                Canvas.SetTop(yAxisLabel, 10);
+                simulationCanvas.Children.Add(yAxisLabel);
+                Canvas.SetZIndex(yAxisLabel, 95);
+                yAxisMarkings.Add(yAxisLabel);
             }
             catch (Exception ex)
             {
