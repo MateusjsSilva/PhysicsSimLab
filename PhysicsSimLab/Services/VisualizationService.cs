@@ -87,17 +87,14 @@ namespace PhysicsSimLab.Services
                 }
                 
                 double groundRectHeight = simulationCanvas.Height - groundY + 1000;
-
-                // Create a vertical linear gradient that's lighter at top and darker at bottom
                 LinearGradientBrush groundGradient = new LinearGradientBrush
                 {
                     StartPoint = new Point(0, 0),
                     EndPoint = new Point(0, 1)
                 };
                 
-                // Add gradient stops - lighter color at top (0.0), darker at bottom (1.0)
-                groundGradient.GradientStops.Add(new GradientStop(Color.FromRgb(210, 180, 140), 0.0)); // Light sandy/tan color
-                groundGradient.GradientStops.Add(new GradientStop(Color.FromRgb(139, 69, 19), 1.0));  // Dark brown
+                groundGradient.GradientStops.Add(new GradientStop(Color.FromRgb(210, 180, 140), 0.0)); 
+                groundGradient.GradientStops.Add(new GradientStop(Color.FromRgb(139, 69, 19), 1.0));
                 
                 groundRectangle = new Rectangle
                 {
@@ -139,7 +136,7 @@ namespace PhysicsSimLab.Services
                 simulationCanvas.Children.Add(yAxisLine);
                 Canvas.SetZIndex(yAxisLine, 90);
                 
-                for (int i = 5; i <= 100; i += 5)
+                for (int i = 5; i <= 140; i += 5)
                 {
                     double xPos = i * scale;
                     
@@ -171,7 +168,7 @@ namespace PhysicsSimLab.Services
                     xAxisMarkings.Add(tickLabel);
                 }
                 
-                for (int i = 5; i <= 50; i += 5)
+                for (int i = 5; i <= 140; i += 5)
                 {
                     double yPos = groundY - i * scale;
                     
