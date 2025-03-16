@@ -30,6 +30,14 @@ PhysicsSimLab is an educational tool designed to help students and teachers visu
 4. **Interacting with Balls**: Drag balls to position them before starting the simulation
 5. **Analyzing Results**: View the information panel for real-time data about position, velocity, and energy
 
+## Interface Screenshots
+
+![Main application interface](/docs/img/img1.png)
+
+![Ball properties panel](/docs/img/img2.png)
+
+![Simulation in action](/docs/img/img3.png)
+
 ## Physical Formulas Used
 
 - **Motion Equations**:
