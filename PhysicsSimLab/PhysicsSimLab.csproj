@@ -1,35 +1,11 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
-    <RootNamespace>PhysicsSimLab</RootNamespace>
-    <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
-    <ImplicitUsings>disable</ImplicitUsings>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <GenerateResourceMSBuildArchitecture>CurrentArchitecture</GenerateResourceMSBuildArchitecture>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
   </PropertyGroup>
-
-  <ItemGroup>
-    <None Remove="Assets\logo.png" />
-    <None Remove="Assets\play.png" />
-    <None Remove="Assets\reset.png" />
-    <None Remove="Assets\pause.png" />
-    <None Remove="Assets\sair.png" />
-    <None Remove="Assets\mais.png" />
-    <None Remove="Assets\menos.png" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Resource Include="Assets\logo.png" />
-    <Resource Include="Assets\play.png" />
-    <Resource Include="Assets\reset.png" />
-    <Resource Include="Assets\pause.png" />
-    <Resource Include="Assets\sair.png" />
-    <Resource Include="Assets\mais.png" />
-    <Resource Include="Assets\menos.png" />
-  </ItemGroup>
 
 </Project>
