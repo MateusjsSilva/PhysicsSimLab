@@ -8,7 +8,7 @@
         xmlns:core="clr-namespace:PhysicsSimLab.Core"
         mc:Ignorable="d"
         Title="Physics Simulation Lab" Height="600" Width="1000">
-    
+
     <Window.Resources>
         <ObjectDataProvider x:Key="SimulationTypeValues" 
                             MethodName="GetValues" 
@@ -17,17 +17,17 @@
                 <x:Type TypeName="core:SimulationType"/>
             </ObjectDataProvider.MethodParameters>
         </ObjectDataProvider>
-        
+
         <!-- Animation for sidebar -->
         <Style x:Key="SidebarStyle" TargetType="Grid">
-            <Setter Property="Width" Value="250"/>
+            <Setter Property="Width" Value="300"/>
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsSidebarExpanded}" Value="False">
-                    <Setter Property="Width" Value="30"/>
+                    <Setter Property="Width" Value="40"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>
-        
+
         <!-- Toggle Button Style -->
         <Style x:Key="ToggleButtonStyle" TargetType="ToggleButton">
             <Setter Property="Template">
@@ -59,22 +59,27 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+            <Setter Property="Width" Value="30"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Background" Value="#FFDDDDDD"/>
+            <Setter Property="BorderBrush" Value="Black"/>
+            <Setter Property="BorderThickness" Value="1"/>
         </Style>
     </Window.Resources>
-    
-    <Grid>
+
+    <Grid Background="#FFF3F4F8">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
-        
+
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
-        
+
         <!-- Menu -->
-        <Menu Grid.Row="0" Grid.ColumnSpan="2">
+        <Menu Grid.Row="0" Grid.ColumnSpan="2" Background="#FFF3F4F8">
             <MenuItem Header="File">
                 <MenuItem Header="Exit" Click="ExitMenuItem_Click"/>
             </MenuItem>
@@ -82,20 +87,20 @@
                 <MenuItem Header="About" Click="AboutMenuItem_Click"/>
             </MenuItem>
         </Menu>
-        
+
         <!-- Sidebar Container with Animation -->
         <Grid x:Name="SidebarContainer" 
               Grid.Row="1" 
               Grid.Column="0" 
-              Style="{StaticResource SidebarStyle}">
-            
+              Style="{StaticResource SidebarStyle}" Background="#FFF3F4F8">
+
             <!-- Use a nested grid to organize the sidebar content and toggle button -->
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-                
+
                 <!-- Sidebar Content - Border removed -->
                 <Border Grid.Row="0" BorderThickness="0">
                     <ScrollViewer VerticalScrollBarVisibility="Auto" 
@@ -106,7 +111,7 @@
                                          ItemsSource="{Binding Source={StaticResource SimulationTypeValues}}"
                                          SelectedItem="{Binding SelectedSimulationType}"/>
                             </GroupBox>
-                            
+
                             <GroupBox Header="Simulation Controls" Margin="0,0,0,10">
                                 <StackPanel Margin="0,5,0,0">
                                     <Button Content="Start" Command="{Binding StartCommand}" Margin="0,0,0,5"/>
@@ -114,36 +119,121 @@
                                     <Button Content="Reset" Command="{Binding ResetCommand}"/>
                                 </StackPanel>
                             </GroupBox>
-                            
+
+                            <!-- Ball Management Controls -->
+                            <GroupBox Header="Ball Management" Margin="0,0,0,10" 
+                                     Visibility="{Binding SelectedSimulationType, Converter={StaticResource EnumToVisibilityConverter}, ConverterParameter={x:Static core:SimulationType.ProjectileMotion}}">
+                                <StackPanel Margin="0,5,0,0">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Button Content="Add Ball" Command="{Binding AddBallCommand}" Margin="0,0,2,5" Grid.Column="0"/>
+                                        <Button Content="Remove Ball" Command="{Binding RemoveBallCommand}" Margin="2,0,0,5" Grid.Column="1"/>
+                                    </Grid>
+                                    <ComboBox ItemsSource="{Binding SimulationObjects}" 
+                                              SelectedItem="{Binding SelectedBall}"
+                                              DisplayMemberPath="Name"
+                                              Margin="0,0,0,5"/>
+                                </StackPanel>
+                            </GroupBox>
+
+                            <!-- Ball Parameters -->
+                            <GroupBox Header="Ball Parameters" Margin="0,0,0,10"
+                                      Visibility="{Binding SelectedBall, Converter={StaticResource NullToVisibilityConverter}}">
+                                <Grid Margin="0,5,0,0">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <Label Content="Massa (kg):" Grid.Row="0" Grid.Column="0"/>
+                                    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding SelectedBall.Mass, UpdateSourceTrigger=PropertyChanged}" 
+                                             Margin="5" FontSize="12" Background="#FFF2F5F9"/>
+
+                                    <Label Content="Velocidade X (m/s):" Grid.Row="1" Grid.Column="0"/>
+                                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding SelectedBall.Vx, UpdateSourceTrigger=PropertyChanged}" 
+                                             Margin="5" FontSize="12" Background="#FFF2F5F9"/>
+
+                                    <Label Content="Velocidade Y (m/s):" Grid.Row="2" Grid.Column="0"/>
+                                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding SelectedBall.Vy, UpdateSourceTrigger=PropertyChanged}" 
+                                             Margin="5" FontSize="12" Background="#FFF2F5F9"/>
+
+                                    <Label Content="Coef. Restituição:" Grid.Row="3" Grid.Column="0"/>
+                                    <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding SelectedBall.Restitution, UpdateSourceTrigger=PropertyChanged}" 
+                                             Margin="5" FontSize="12" Background="#FFF2F5F9"/>
+
+                                    <Label Content="Tamanho da Bola (px):" Grid.Row="4" Grid.Column="0"/>
+                                    <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding SelectedBall.Size, UpdateSourceTrigger=PropertyChanged}" 
+                                             Margin="5" FontSize="12" Background="#FFF2F5F9"/>
+                                </Grid>
+                            </GroupBox>
+
+                            <!-- Global Physics Parameters -->
+                            <GroupBox Header="Parâmetros Físicos" Margin="0,0,0,10"
+                                      Visibility="{Binding SelectedSimulationType, Converter={StaticResource EnumToVisibilityConverter}, ConverterParameter={x:Static core:SimulationType.ProjectileMotion}}">
+                                <Grid Margin="0,5,0,0">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <Label Content="Gravidade (m/s²):" Grid.Row="0" Grid.Column="0"/>
+                                    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Gravity, UpdateSourceTrigger=PropertyChanged}" 
+                                             Margin="5" FontSize="12" Background="#FFF2F5F9"/>
+
+                                    <Label Content="Resistência do Ar:" Grid.Row="1" Grid.Column="0"/>
+                                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding AirResistance, UpdateSourceTrigger=PropertyChanged}" 
+                                             Margin="5" FontSize="12" Background="#FFF2F5F9"/>
+
+                                    <Label Content="Atrito Horizontal:" Grid.Row="2" Grid.Column="0"/>
+                                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Friction, UpdateSourceTrigger=PropertyChanged}" 
+                                             Margin="5" FontSize="12" Background="#FFF2F5F9"/>
+                                </Grid>
+                            </GroupBox>
+
                             <GroupBox Header="Projectile Motion Parameters" 
                                      Visibility="{Binding SelectedSimulationType, Converter={StaticResource EnumToVisibilityConverter}, ConverterParameter={x:Static core:SimulationType.ProjectileMotion}}">
                                 <StackPanel Margin="0,5,0,0">
                                     <TextBlock Text="Initial Height (m):"/>
                                     <Slider Minimum="0" Maximum="100" Value="{Binding InitialHeight}" TickFrequency="10" TickPlacement="BottomRight"/>
                                     <TextBlock Text="{Binding InitialHeight, StringFormat='{}{0:F1}'}"/>
-                                    
+
                                     <TextBlock Text="Initial Velocity (m/s):" Margin="0,10,0,0"/>
                                     <Slider Minimum="0" Maximum="50" Value="{Binding InitialVelocity}" TickFrequency="5" TickPlacement="BottomRight"/>
                                     <TextBlock Text="{Binding InitialVelocity, StringFormat='{}{0:F1}'}"/>
-                                    
+
                                     <TextBlock Text="Launch Angle (degrees):" Margin="0,10,0,0"/>
                                     <Slider Minimum="0" Maximum="90" Value="{Binding LaunchAngle}" TickFrequency="15" TickPlacement="BottomRight"/>
                                     <TextBlock Text="{Binding LaunchAngle, StringFormat='{}{0:F1}'}"/>
                                 </StackPanel>
                             </GroupBox>
-                            
+
                             <GroupBox Header="Planetary Orbit Parameters" 
                                      Visibility="{Binding SelectedSimulationType, Converter={StaticResource EnumToVisibilityConverter}, ConverterParameter={x:Static core:SimulationType.PlanetaryOrbit}}">
                                 <StackPanel Margin="0,5,0,0">
                                     <TextBlock Text="Planet Mass (kg):"/>
                                     <TextBox Text="{Binding PlanetMass, StringFormat='{}{0:E2}'}" Margin="0,0,0,5"/>
-                                    
+
                                     <TextBlock Text="Satellite Mass (kg):"/>
                                     <TextBox Text="{Binding SatelliteMass, StringFormat='{}{0:E2}'}" Margin="0,0,0,5"/>
-                                    
+
                                     <TextBlock Text="Orbit Radius (m):"/>
                                     <TextBox Text="{Binding OrbitRadius, StringFormat='{}{0:E2}'}" Margin="0,0,0,5"/>
-                                    
+
                                     <TextBlock Text="Orbit Velocity (m/s):"/>
                                     <TextBox Text="{Binding OrbitVelocity, StringFormat='{}{0:F1}'}" Margin="0,0,0,5"/>
                                 </StackPanel>
@@ -151,11 +241,11 @@
                         </StackPanel>
                     </ScrollViewer>
                 </Border>
-                
+
                 <!-- Toggle Button at the bottom - Border removed -->
                 <Border Grid.Row="1" BorderThickness="0">
-                    <ToggleButton Width="20" 
-                                 Height="20" 
+                    <ToggleButton Width="30" 
+                                 Height="30"
                                  HorizontalAlignment="Right" 
                                  Margin="0,5,5,5" 
                                  IsChecked="{Binding IsSidebarExpanded}" 
@@ -163,39 +253,85 @@
                 </Border>
             </Grid>
         </Grid>
-        
+
         <!-- Simulation View - Border removed -->
-        <Border Grid.Row="1" Grid.Column="1" BorderThickness="0" Margin="10">
-            <Canvas x:Name="SimulationCanvas" Background="LightBlue" ClipToBounds="True">
-                <ItemsControl ItemsSource="{Binding SimulationObjects}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <Canvas/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemContainerStyle>
-                        <Style TargetType="ContentPresenter">
-                            <Setter Property="Canvas.Left" Value="{Binding X, Converter={StaticResource ScaleConverter}}"/>
-                            <Setter Property="Canvas.Bottom" Value="{Binding Y, Converter={StaticResource ScaleConverter}}"/>
-                        </Style>
-                    </ItemsControl.ItemContainerStyle>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Grid>
-                                <Ellipse Width="{Binding Radius, Converter={StaticResource ScaleConverter}}" 
-                                        Height="{Binding Radius, Converter={StaticResource ScaleConverter}}" 
-                                        Fill="Red" Stroke="Black" StrokeThickness="1"
-                                        Canvas.Left="{Binding X}"
-                                        Canvas.Bottom="{Binding Y}"/>
-                                <TextBlock Text="{Binding Name}" 
-                                          Canvas.Left="{Binding X}" 
-                                          Canvas.Bottom="{Binding Y}"
-                                          Margin="0,0,0,10"/>
-                            </Grid>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </Canvas>
+        <Border Grid.Row="1" Grid.Column="1" BorderThickness="0" Margin="10" Background="#FFF3F4F8">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="17*"/>
+                    <RowDefinition Height="22*"/>
+                </Grid.RowDefinitions>
+                <Canvas x:Name="SimulationCanvas" Background="LightBlue" ClipToBounds="True" Loaded="SimulationCanvas_Loaded" Grid.RowSpan="2">
+                    <!-- Add a ground line for reference -->
+                    <Line X1="0" Y1="{Binding ActualHeight, ElementName=SimulationCanvas}" 
+                        X2="{Binding ActualWidth, ElementName=SimulationCanvas}" 
+                        Y2="{Binding ActualHeight, ElementName=SimulationCanvas}"
+                        Stroke="Green" StrokeThickness="2"/>
+
+                    <!-- Remove the problematic Canvas.Resources section with x:Code -->
+
+                    <ItemsControl ItemsSource="{Binding SimulationObjects}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <Canvas/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemContainerStyle>
+                            <Style TargetType="ContentPresenter">
+                                <!-- Fix for positioning - use Center of ball as reference point -->
+                                <Setter Property="Canvas.Left" Value="{Binding X, Converter={StaticResource ScaleConverter}}"/>
+                                <Setter Property="Canvas.Bottom" Value="{Binding Y, Converter={StaticResource ScaleConverter}}"/>
+                                <Setter Property="Panel.ZIndex" Value="10"/>
+                            </Style>
+                        </ItemsControl.ItemContainerStyle>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <!-- Trajectory Path -->
+                                    <Polyline Points="{Binding TrajectoryPoints}" 
+                                            Stroke="{Binding Color}" 
+                                            StrokeThickness="1" 
+                                            StrokeDashArray="2,2"
+                                            Opacity="0.6"/>
+
+                                    <!-- Ball - Fix the margin binding -->
+                                    <Ellipse Width="{Binding Size}" 
+                                            Height="{Binding Size}" 
+                                            Fill="{Binding Color}" 
+                                            Stroke="Black" 
+                                            StrokeThickness="1"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center">
+                                        <Ellipse.Margin>
+                                            <!-- Ensure the HalfValueConverter is correctly referenced -->
+                                            <MultiBinding Converter="{StaticResource NegativeThicknessConverter}">
+                                                <Binding Path="Size" Converter="{StaticResource HalfValueConverter}"/>
+                                            </MultiBinding>
+                                        </Ellipse.Margin>
+                                    </Ellipse>
+
+                                    <!-- Ball Label -->
+                                    <TextBlock Text="{Binding Name}" 
+                                            Foreground="White"
+                                            FontWeight="Bold"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Canvas>
+
+                <!-- Debugging Information -->
+                <TextBlock HorizontalAlignment="Left" VerticalAlignment="Top" 
+                        Margin="10,10,0,0" Background="#80FFFFFF" Padding="5">
+                    <Run Text="Debug: "/>
+                    <Run Text="{Binding SimulationObjects.Count, StringFormat='Balls: {0}', Mode=OneWay}"/>
+                    <LineBreak/>
+                    <Run Text="{Binding SelectedBall.X, StringFormat='X: {0:F1}', FallbackValue='X: 0.0'}"/>
+                    <Run Text="{Binding SelectedBall.Y, StringFormat='Y: {0:F1}', FallbackValue='Y: 0.0'}"/>
+                </TextBlock>
+            </Grid>
         </Border>
     </Grid>
 </Window>

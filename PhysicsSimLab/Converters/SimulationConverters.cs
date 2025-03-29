@@ -13,8 +13,11 @@ namespace PhysicsSimLab.Converters
             if (value == null || parameter == null)
                 return Visibility.Collapsed;
 
-            var valueStr = value.ToString();
-            var parameterStr = parameter.ToString();
+            var valueStr = value?.ToString();
+            var parameterStr = parameter?.ToString();
+            
+            if (valueStr == null || parameterStr == null)
+                return Visibility.Collapsed;
             
             return valueStr.Equals(parameterStr) ? Visibility.Visible : Visibility.Collapsed;
         }
@@ -67,6 +70,58 @@ namespace PhysicsSimLab.Converters
                 return visibility == Visibility.Visible;
             }
             return true;
+        }
+    }
+
+    public class HalfValueConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is double doubleValue)
+            {
+                return doubleValue / 2;
+            }
+            return value;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is double doubleValue)
+            {
+                return doubleValue * 2;
+            }
+            return value;
+        }
+    }
+
+    public class NullToVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            return value != null ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class NegativeThicknessConverter : IMultiValueConverter
+    {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (values.Length > 0 && values[0] is double value)
+            {
+                // Create a Thickness with negative values on all sides
+                return new Thickness(-value, -value, -value, -value);
+            }
+            return new Thickness(0);
+        }
+
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
         }
     }
 }

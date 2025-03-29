@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Windows;
 using PhysicsSimLab.Models;
 
@@ -14,7 +12,9 @@ namespace PhysicsSimLab.Core
     public class PhysicsEngine
     {
         public const double G = 6.67430e-11;
-        public const double EarthG = 9.81;
+        public double EarthG { get; set; } = 9.81;
+        public double AirResistance { get; set; } = 0.01;
+        public double Friction { get; set; } = 0.95;
 
         private SimulationType _currentSimulation;
         private List<SimulationObject> _objects = new();
@@ -67,6 +67,16 @@ namespace PhysicsSimLab.Core
             {
                 obj.Acceleration = new Vector(0, -EarthG);
                 
+                if (AirResistance > 0)
+                {
+                    double speed = obj.Velocity.Length;
+                    if (speed > 0)
+                    {
+                        Vector dragForce = -obj.Velocity / speed * AirResistance * speed * speed;
+                        obj.Acceleration += dragForce / obj.Mass;
+                    }
+                }
+                
                 obj.Velocity += obj.Acceleration * _timeStep;
                 
                 obj.Position += obj.Velocity * _timeStep;
@@ -74,7 +84,11 @@ namespace PhysicsSimLab.Core
                 if (obj.Position.Y < 0)
                 {
                     obj.Position = new Vector(obj.Position.X, 0);
-                    obj.Velocity = new Vector(obj.Velocity.X * 0.8, -obj.Velocity.Y * 0.8);
+                    
+                    obj.Velocity = new Vector(
+                        obj.Velocity.X * Friction, 
+                        -obj.Velocity.Y * obj.Ball.Restitution
+                    );
                 }
             }
         }

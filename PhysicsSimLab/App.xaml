@@ -8,5 +8,8 @@
         <converters:EnumToVisibilityConverter x:Key="EnumToVisibilityConverter"/>
         <converters:ScaleConverter x:Key="ScaleConverter"/>
         <converters:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+        <converters:NegativeThicknessConverter x:Key="NegativeThicknessConverter"/>
+        <converters:HalfValueConverter x:Key="HalfValueConverter"/>
     </Application.Resources>
 </Application>
