@@ -1,0 +1,23 @@
+   <Label Content="Massa (kg):" Grid.Row="0" Grid.Column="0"/>
+                                <TextBox x:Name="SelectedBallMassTextBox" Grid.Row="0" Grid.Column="1" Text="1.0" Margin="5"  FontSize="12" Background="#FFF2F5F9"/>
+
+                                <Label Content="Velocidade X (m/s):" Grid.Row="1" Grid.Column="0"/>
+                                <TextBox x:Name="SelectedBallVxTextBox" Grid.Row="1" Grid.Column="1" Text="6" Margin="5"  FontSize="12" Background="#FFF2F5F9"/>
+
+                                <Label Content="Velocidade Y (m/s):" Grid.Row="2" Grid.Column="0"/>
+                                <TextBox x:Name="SelectedBallVyTextBox" Grid.Row="2" Grid.Column="1" Text="15" Margin="5"  FontSize="12" Background="#FFF2F5F9"/>
+
+                                <Label Content="Coef. Restituição:" Grid.Row="3" Grid.Column="0"/>
+                                <TextBox x:Name="SelectedBallRestitutionTextBox" Grid.Row="3" Grid.Column="1" Text="0.7" Margin="5"  FontSize="12" Background="#FFF2F5F9"/>
+
+                                <Label Content="Tamanho da Bola (px):" Grid.Row="4" Grid.Column="0"/>
+                                <TextBox x:Name="SelectedBallSizeTextBox" Grid.Row="4" Grid.Column="1" Text="30" Margin="5" FontSize="12" Background="#FFF2F5F9"/>
+
+                                <Label Content="Gravidade (m/s²):" Grid.Row="5" Grid.Column="0"/>
+                                <TextBox x:Name="GravityTextBox" Grid.Row="5" Grid.Column="1" Text="9.81" Margin="5" FontSize="12" Background="#FFF2F5F9"/>
+
+                                <Label Content="Resistência do Ar:" Grid.Row="6" Grid.Column="0"/>
+                                <TextBox x:Name="AirResistanceTextBox" Grid.Row="6" Grid.Column="1" Text="0.01" Margin="5"  FontSize="12" Background="#FFF2F5F9"/>
+
+                                <Label Content="Atrito Horizontal:" Grid.Row="7" Grid.Column="0"/>
+                                <TextBox x:Name="FrictionTextBox" Grid.Row="7" Grid.Column="1" Text="0.95" Margin="5"  FontSize="12" Background="#FFF2F5F9"/>
